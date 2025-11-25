@@ -131,6 +131,7 @@ class MGDApp(QMainWindow):
         self.label_robot_name = QLineEdit()
         self.label_robot_name.setText("")
         self.label_robot_name.setReadOnly(False)  # Permet la modification
+        tables_layout.addWidget(self.label_robot_name)
 
         self.table_dh = QTableWidget(6, 4)
         self.table_dh.setHorizontalHeaderLabels(["alpha (rad)", "d (mm)", "theta (rad)", "r (mm)"])
