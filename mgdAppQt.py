@@ -232,6 +232,7 @@ class MGDApp(QMainWindow):
         self.dh_ori=np.zeros(3)
         self.corrected_pos=np.zeros(3)
         self.corrected_ori=np.zeros(3)
+        self.step_index = None
 
         # Connexions
         self.btn_calc.clicked.connect(self.calculer_mgd)
@@ -244,7 +245,7 @@ class MGDApp(QMainWindow):
         self.btn_limits.clicked.connect(self.configurer_limites_axes)
 
         self.matrices_step = []
-        self.step_index = 0
+        
 
     def lire_parametres(self):
         params = []
