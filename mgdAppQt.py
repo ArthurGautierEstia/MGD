@@ -186,9 +186,9 @@ class MGDApp(QMainWindow):
         self.dh_ori[1] = np.degrees(np.arctan2(-T_dh[2,0], np.sqrt(T_dh[2,1]**2 + T_dh[2,2]**2)))
         self.dh_ori[2]= np.degrees(np.arctan2(T_dh[1,0], T_dh[0,0]))
         self.corrected_pos = T_corrected[:3,3]
-        self.corrected_ori[0] = np.arctan2(T_corrected[2,1], T_corrected[2,2])
-        self.corrected_ori[1] = np.arctan2(-T_corrected[2,0], np.sqrt(T_corrected[2,1]**2 + T_corrected[2,2]**2))
-        self.corrected_ori[2]= np.arctan2(T_corrected[1,0], T_corrected[0,0])
+        self.corrected_ori[0] = np.degrees(np.arctan2(T_corrected[2,1], T_corrected[2,2]))
+        self.corrected_ori[1] = np.degrees(np.arctan2(-T_corrected[2,0], np.sqrt(T_corrected[2,1]**2 + T_corrected[2,2]**2)))
+        self.corrected_ori[2]= np.degrees(np.arctan2(T_corrected[1,0], T_corrected[0,0]))
         
         self.result_table.setItem(0, 0, QTableWidgetItem(f"{self.dh_pos[0]:.3f}"))
         self.result_table.setItem(1, 0, QTableWidgetItem(f"{self.dh_pos[1]:.3f}"))
