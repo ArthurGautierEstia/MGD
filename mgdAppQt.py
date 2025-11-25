@@ -3,9 +3,10 @@ import json
 import numpy as np
 from PyQt5.QtWidgets import (
     QApplication, QMainWindow, QWidget, QVBoxLayout, QHBoxLayout,
-    QTableWidget, QTableWidgetItem, QPushButton, QLabel, QSlider, QSpinBox, QFileDialog
+    QTableWidget, QTableWidgetItem, QPushButton, QLabel, QSlider, QSpinBox, QFileDialog, QLineEdit
 )
 from PyQt5.QtCore import Qt
+from PyQt5.QtGui import QFont
 import pyqtgraph.opengl as gl
 from pyqtgraph.Qt import QtGui
 
@@ -37,10 +38,16 @@ def dh_modified(alpha, d, theta, r):
 
 def correction_6d(T, tx, ty, tz, rx, ry, rz):
     rx, ry, rz = np.radians([rx, ry, rz])
-    Rx = np.array([[1,0,0],[0,np.cos(rx),-np.sin(rx)],[0,np.sin(rx),np.cos(rx)]])
-    Ry = np.array([[np.cos(ry),0,np.sin(ry)],[0,1,0],[-np.sin(ry),0,np.cos(ry)]])
-    Rz = np.array([[np.cos(rz),-np.sin(rz),0],[np.sin(rz),np.cos(rz),0],[0,0,1]])
-    R = Rz @ Ry @ Rx
+    Rx = np.array([[1,0,0],
+                   [0,np.cos(rx),-np.sin(rx)],
+                   [0,np.sin(rx),np.cos(rx)]])
+    Ry = np.array([[np.cos(ry),0,np.sin(ry)],
+                   [0,1,0],
+                   [-np.sin(ry),0,np.cos(ry)]])
+    Rz = np.array([[np.cos(rz),-np.sin(rz),0],
+                   [np.sin(rz),np.cos(rz),0],
+                   [0,0,1]])
+    R = Rz @ Ry @ Rx # Rotation Fixed angles ZYX
     corr = np.eye(4)
     corr[:3,:3] = R
     corr[:3,3] = [tx, ty, tz]
@@ -52,7 +59,7 @@ def correction_6d(T, tx, ty, tz, rx, ry, rz):
 class MGDApp(QMainWindow):
     def __init__(self):
         super().__init__()
-        self.setWindowTitle("MGD Robot KUKA KR10R1100 - PyQtGraph")
+        self.setWindowTitle("MGD Robot - PyQtGraph")
         self.resize(1400, 800)
 
         central_widget = QWidget()
@@ -62,6 +69,13 @@ class MGDApp(QMainWindow):
         # Zone tables
         tables_layout = QVBoxLayout()
         tables_layout.addWidget(QLabel("Paramètres DH"))
+
+        self.label_robot_name = QLineEdit()
+        self.label_robot_name.setText("")
+        self.label_robot_name.setReadOnly(False)  # Permet la modification
+        tables_layout.addWidget(self.label_robot_name)
+
+
         self.table_dh = QTableWidget(6, 4)
         self.table_dh.setHorizontalHeaderLabels(["alpha (rad)", "d (mm)", "theta (rad)", "r (mm)"])
         self.table_dh.horizontalHeader().setDefaultSectionSize(90)
@@ -70,7 +84,7 @@ class MGDApp(QMainWindow):
 
         tables_layout.addWidget(QLabel("Corrections 6D"))
         self.table_corr = QTableWidget(6, 6)
-        self.table_corr.setHorizontalHeaderLabels(["Tx", "Ty", "Tz", "Rx", "Ry", "Rz"])
+        self.table_corr.setHorizontalHeaderLabels(["Tx(mm)", "Ty(mm)", "Tz(mm)", "Rx(°)", "Ry(°)", "Rz(°)"])
         self.table_corr.horizontalHeader().setDefaultSectionSize(70)
         #self.table_corr.setFixedHeight(150)
         tables_layout.addWidget(self.table_corr)
@@ -98,6 +112,7 @@ class MGDApp(QMainWindow):
             self.sliders_q.append(slider)
             self.spinboxes_q.append(spinbox)
         
+        
 
         # Boutons
         btn_layout = QVBoxLayout()
@@ -106,12 +121,19 @@ class MGDApp(QMainWindow):
         self.btn_step = QPushButton("Affichage pas à pas")
         self.btn_save = QPushButton("Sauvegarder config")
         self.btn_load = QPushButton("Charger config")
-        btn_layout.addWidget(self.btn_calc)
-        btn_layout.addWidget(self.btn_visual)
-        btn_layout.addWidget(self.btn_step)
-        btn_layout.addWidget(self.btn_save)
-        btn_layout.addWidget(self.btn_load)
-        slider_layout.addLayout(btn_layout)
+        slider_layout.addWidget(self.btn_calc)
+        slider_layout.addWidget(self.btn_visual)
+        slider_layout.addWidget(self.btn_step)
+        slider_layout.addWidget(self.btn_save)
+        slider_layout.addWidget(self.btn_load)
+
+         # Résultat MGD
+        self.result_table = QTableWidget(6, 3)
+        self.result_table.setHorizontalHeaderLabels(["Pos TCP","Pos TCP Corrigée", "Deltas"])
+        self.result_table.setVerticalHeaderLabels(["X (mm)","Y (mm)","Z (mm)", "A (°)","B (°)","C (°)"])
+        self.result_table.horizontalHeader().setDefaultSectionSize(80)
+        slider_layout.addWidget(self.result_table)
+       
         layout.addLayout(slider_layout)
 
         # Zone viewer PyQtGraph
@@ -131,18 +153,14 @@ class MGDApp(QMainWindow):
         viewer_layout.addLayout(nav_layout)
         layout.addLayout(viewer_layout)
 
-        # Résultat MGD
-        self.result_table = QTableWidget(6, 2)
-        self.result_table.setHorizontalHeaderLabels(["Position Sans Correction","Position Corrigée"])
-        self.result_table.setVerticalHeaderLabels(["X(mm)","Y(mm)","Z(mm)", "A(°)","B(°)","C(°)"])
-        self.result_table.horizontalHeader().setDefaultSectionSize(80)
-        btn_layout.addWidget(self.result_table)
+       
 
         # Stocker les transormations
         self.dh_matrices=[np.eye(4)]
         self.corrected_matrices=[np.eye(4)]
         self.dh_pos=np.zeros(3)
         self.dh_ori=np.zeros(3)
+        self.corrected_pos=np.zeros(3)
         self.corrected_ori=np.zeros(3)
 
         # Connexions
@@ -190,19 +208,26 @@ class MGDApp(QMainWindow):
         self.corrected_ori[1] = np.degrees(np.arctan2(-T_corrected[2,0], np.sqrt(T_corrected[2,1]**2 + T_corrected[2,2]**2)))
         self.corrected_ori[2]= np.degrees(np.arctan2(T_corrected[1,0], T_corrected[0,0]))
         
-        self.result_table.setItem(0, 0, QTableWidgetItem(f"{self.dh_pos[0]:.3f}"))
-        self.result_table.setItem(1, 0, QTableWidgetItem(f"{self.dh_pos[1]:.3f}"))
-        self.result_table.setItem(2, 0, QTableWidgetItem(f"{self.dh_pos[2]:.3f}"))
-        self.result_table.setItem(3, 0, QTableWidgetItem(f"{self.dh_ori[0]:.3f}"))
-        self.result_table.setItem(4, 0, QTableWidgetItem(f"{self.dh_ori[1]:.3f}"))
-        self.result_table.setItem(5, 0, QTableWidgetItem(f"{self.dh_ori[2]:.3f}"))
+        self.result_table.setItem(0, 0, QTableWidgetItem(f"{self.dh_pos[0]:.2f}"))
+        self.result_table.setItem(1, 0, QTableWidgetItem(f"{self.dh_pos[1]:.2f}"))
+        self.result_table.setItem(2, 0, QTableWidgetItem(f"{self.dh_pos[2]:.2f}"))
+        self.result_table.setItem(3, 0, QTableWidgetItem(f"{self.dh_ori[0]:.4f}"))
+        self.result_table.setItem(4, 0, QTableWidgetItem(f"{self.dh_ori[1]:.4f}"))
+        self.result_table.setItem(5, 0, QTableWidgetItem(f"{self.dh_ori[2]:.4f}"))
 
-        self.result_table.setItem(0, 1, QTableWidgetItem(f"{self.corrected_pos[0]:.3f}"))
-        self.result_table.setItem(1, 1, QTableWidgetItem(f"{self.corrected_pos[1]:.3f}"))
-        self.result_table.setItem(2, 1, QTableWidgetItem(f"{self.corrected_pos[2]:.3f}"))
-        self.result_table.setItem(3, 1, QTableWidgetItem(f"{self.corrected_ori[0]:.3f}"))
-        self.result_table.setItem(4, 1, QTableWidgetItem(f"{self.corrected_ori[1]:.3f}"))
-        self.result_table.setItem(5, 1, QTableWidgetItem(f"{self.corrected_ori[2]:.3f}"))
+        self.result_table.setItem(0, 1, QTableWidgetItem(f"{self.corrected_pos[0]:.2f}"))
+        self.result_table.setItem(1, 1, QTableWidgetItem(f"{self.corrected_pos[1]:.2f}"))
+        self.result_table.setItem(2, 1, QTableWidgetItem(f"{self.corrected_pos[2]:.2f}"))
+        self.result_table.setItem(3, 1, QTableWidgetItem(f"{self.corrected_ori[0]:.4f}"))
+        self.result_table.setItem(4, 1, QTableWidgetItem(f"{self.corrected_ori[1]:.4f}"))
+        self.result_table.setItem(5, 1, QTableWidgetItem(f"{self.corrected_ori[2]:.4f}"))
+
+        self.result_table.setItem(0, 2, QTableWidgetItem(f"{self.dh_pos[0]-self.corrected_pos[0]:.2f}"))
+        self.result_table.setItem(1, 2, QTableWidgetItem(f"{self.dh_pos[1]-self.corrected_pos[1]:.2f}"))
+        self.result_table.setItem(2, 2, QTableWidgetItem(f"{self.dh_pos[2]-self.corrected_pos[2]:.2f}"))
+        self.result_table.setItem(3, 2, QTableWidgetItem(f"{self.dh_ori[0]-self.corrected_ori[0]:.4f}"))
+        self.result_table.setItem(4, 2, QTableWidgetItem(f"{self.dh_ori[1]-self.corrected_ori[1]:.4f}"))
+        self.result_table.setItem(5, 2, QTableWidgetItem(f"{self.dh_ori[2]-self.corrected_ori[2]:.4f}"))
 
 
     def visualiser_3d(self):
@@ -223,7 +248,7 @@ class MGDApp(QMainWindow):
             self.step_index = 0
             self.btn_prev.setVisible(True)
             self.btn_next.setVisible(True)
-            self.afficher_repere_jaune()
+            self.visualiser_3d()
         
 
     def afficher_repere_suivant(self):
@@ -287,6 +312,7 @@ class MGDApp(QMainWindow):
                 "dh": [[self.table_dh.item(i,j).text() if self.table_dh.item(i,j) else "" for j in range(4)] for i in range(6)],
                 "corr": [[self.table_corr.item(i,j).text() if self.table_corr.item(i,j) else "" for j in range(6)] for i in range(6)],
                 "q": [spinbox.value() for spinbox in self.spinboxes_q]
+                ,"name": [self.label_robot_name.text()]
             }
             with open(file_name, "w") as f:
                 json.dump(data, f, indent=4)
@@ -303,6 +329,11 @@ class MGDApp(QMainWindow):
                     for j in range(6):
                         self.table_corr.setItem(i,j,QTableWidgetItem(data["corr"][i][j]))
                     self.spinboxes_q[i].setValue(data["q"][i])
+                if "name" in data and len(data["name"]) > 0:
+                    self.label_robot_name.setText(data["name"][0])
+                else:
+                    self.label_robot_name.setText("Configuration chargée")
+
             except Exception as e:
                 print(f"Erreur lors du chargement: {e}")
 
