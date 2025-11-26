@@ -10,6 +10,8 @@ from PyQt5.QtCore import Qt
 from PyQt5.QtGui import QFont
 import pyqtgraph.opengl as gl
 from pyqtgraph.Qt import QtGui
+import pyqtgraph as pg
+pg.setConfigOptions(antialias=True)
 
 # -------------------------------
 # Fonctions utilitaires
@@ -209,8 +211,12 @@ class MGDApp(QMainWindow):
         # Zone viewer PyQtGraph
         viewer_layout = QVBoxLayout()
         self.viewer = gl.GLViewWidget()
+        self.viewer.opts['glOptions'] = 'opaque'
+        self.viewer.opts['depth'] = True
         self.viewer.setCameraPosition(distance=1500)
         self.viewer.setMinimumSize(600, 400)
+        self.viewer.setBackgroundColor(45, 45, 48, 255)  # Gris clair
+        self.ajouter_grille()
         viewer_layout.addWidget(self.viewer)
 
         nav_layout = QHBoxLayout()
@@ -304,6 +310,7 @@ class MGDApp(QMainWindow):
 
     def visualiser_3d(self):
         self.viewer.clear()
+        self.ajouter_grille()
         for T in self.dh_matrices:
             self.afficher_repere(T)
         if self.step_index is not None:
@@ -350,7 +357,7 @@ class MGDApp(QMainWindow):
             np.array([origine, origine + R[:, 2] * longueur])   # Axe Z
         ]
 
-        couleurs = [(1, 0, 0, 1), (0, 1, 0, 1), (0, 0, 1, 1)]  # X=Rouge, Y=Vert, Z=Bleu
+        couleurs = [(255, 0, 0, 1), (0, 255, 0, 1), (0, 0, 255, 1)]  # X=Rouge, Y=Vert, Z=Bleu
 
         for i, axis in enumerate(axes):
             plt = gl.GLLinePlotItem(pos=axis, color=couleurs[i], width=2)
@@ -375,7 +382,28 @@ class MGDApp(QMainWindow):
         for i, axis in enumerate(axes):
             plt = gl.GLLinePlotItem(pos=axis, color=couleur, width=2)
             self.viewer.addItem(plt)
-            
+
+    def afficher_repere_cylindres(self, T, rayon=5, longueur=50):
+        origine = T[:3, 3]
+        R = T[:3, :3]
+        
+        couleurs = [(1, 0, 0, 1), (0, 1, 0, 1), (0, 0, 1, 1)]
+        directions = [R[:, 0], R[:, 1], R[:, 2]]
+        
+        for i, (direction, couleur) in enumerate(zip(directions, couleurs)):
+            # Créer un cylindre orienté
+            mesh = gl.MeshData.cylinder(rows=10, cols=20, radius=[rayon, rayon], length=longueur)
+            cylinder = gl.GLMeshItem(meshdata=mesh, color=couleur, smooth=True)
+            self.viewer.addItem(cylinder)
+
+
+    def ajouter_grille(self):
+        """Ajoute une grille quadrillée au sol selon les axes X et Y"""
+        grid = gl.GLGridItem()
+        grid.setSize(x=4000, y=4000, z=0)  # Taille de la grille en mm
+        grid.setSpacing(x=200, y=200, z=200)  # Espacement des lignes en mm
+        grid.setColor((150, 150, 150, 100))  # Couleur grise semi-transparente
+        self.viewer.addItem(grid) 
 
     def sauvegarder_config(self):
         file_name, _ = QFileDialog.getSaveFileName(self, "Sauvegarder configuration", "", "JSON Files (*.json)")
