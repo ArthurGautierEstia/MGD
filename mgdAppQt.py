@@ -11,7 +11,7 @@ from PyQt5.QtGui import QFont
 import pyqtgraph.opengl as gl
 from pyqtgraph.Qt import QtGui
 import pyqtgraph as pg
-pg.setConfigOptions(antialias=True)
+
 
 # -------------------------------
 # Fonctions utilitaires
@@ -350,7 +350,7 @@ class MGDApp(QMainWindow):
             self.visualiser_3d()
 
     
-    def afficher_repere(self, T, longueur=50):
+    def afficher_repere(self, T, longueur=100):
         """
         Affiche un repère orienté selon la matrice homogène T.
         T : matrice 4x4 (rotation + translation)
@@ -369,10 +369,9 @@ class MGDApp(QMainWindow):
         couleurs = [(255, 0, 0, 1), (0, 255, 0, 1), (0, 0, 255, 1)]  # X=Rouge, Y=Vert, Z=Bleu
 
         for i, axis in enumerate(axes):
-            plt = gl.GLLinePlotItem(pos=axis, color=couleurs[i], width=2)
+            plt = gl.GLLinePlotItem(pos=axis, color=couleurs[i], width=3, antialias=True)
             self.viewer.addItem(plt)
-        
-
+    
     
     def afficher_repere_jaune(self,longueur=100):
         T= self.dh_matrices[self.step_index]
@@ -389,21 +388,8 @@ class MGDApp(QMainWindow):
         couleur = (1, 1, 0, 1)  # Jaune pour tous les axes
 
         for i, axis in enumerate(axes):
-            plt = gl.GLLinePlotItem(pos=axis, color=couleur, width=2)
+            plt = gl.GLLinePlotItem(pos=axis, color=couleur, width=3, antialias=True)
             self.viewer.addItem(plt)
-
-    def afficher_repere_cylindres(self, T, rayon=5, longueur=50):
-        origine = T[:3, 3]
-        R = T[:3, :3]
-        
-        couleurs = [(1, 0, 0, 1), (0, 1, 0, 1), (0, 0, 1, 1)]
-        directions = [R[:, 0], R[:, 1], R[:, 2]]
-        
-        for i, (direction, couleur) in enumerate(zip(directions, couleurs)):
-            # Créer un cylindre orienté
-            mesh = gl.MeshData.cylinder(rows=10, cols=20, radius=[rayon, rayon], length=longueur)
-            cylinder = gl.GLMeshItem(meshdata=mesh, color=couleur, smooth=True)
-            self.viewer.addItem(cylinder)
 
 
     def ajouter_grille(self):
