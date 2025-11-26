@@ -170,6 +170,8 @@ class MGDApp(QMainWindow):
 
             slider.valueChanged.connect(spinbox.setValue)
             spinbox.valueChanged.connect(slider.setValue)
+            spinbox.valueChanged.connect(self.calculer_mgd)
+            slider.valueChanged.connect(self.visualiser_3d)
 
             row_layout.addWidget(label)
             row_layout.addWidget(slider)
@@ -249,6 +251,8 @@ class MGDApp(QMainWindow):
         self.btn_prev.clicked.connect(self.afficher_repere_precedent)
         self.btn_next.clicked.connect(self.afficher_repere_suivant)
         self.btn_limits.clicked.connect(self.configurer_limites_axes)
+        
+
 
         self.matrices_step = []
         
@@ -269,6 +273,8 @@ class MGDApp(QMainWindow):
 
     def calculer_mgd(self):
         params = self.lire_parametres()
+        self.dh_matrices = [np.eye(4)]
+        self.corrected_matrices = [np.eye(4)]
         T_dh = np.eye(4)
         T_corrected = np.eye(4)
         for (alpha, d, theta, r, corr) in params:
@@ -309,6 +315,7 @@ class MGDApp(QMainWindow):
 
 
     def visualiser_3d(self):
+        self.calculer_mgd()
         self.viewer.clear()
         self.ajouter_grille()
         for T in self.dh_matrices:
