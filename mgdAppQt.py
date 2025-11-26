@@ -2,7 +2,7 @@ import sys
 import json
 import numpy as np
 from PyQt5.QtWidgets import (
-    QApplication, QMainWindow, QWidget, QVBoxLayout, QHBoxLayout,
+    QApplication, QMainWindow, QWidget, QVBoxLayout, QHBoxLayout, QGridLayout,
     QTableWidget, QTableWidgetItem, QPushButton, QLabel, QSlider, QSpinBox, QFileDialog, QLineEdit,
     QDialog, QSpinBox as ConfigSpinBox
 )
@@ -128,12 +128,21 @@ class MGDApp(QMainWindow):
 
         # Zone tables
         tables_layout = QVBoxLayout()
-        tables_layout.addWidget(QLabel("Paramètres DH"))
+        th_layout = QGridLayout()
+        me_layout = QGridLayout()
 
-        self.label_robot_name = QLineEdit()
-        self.label_robot_name.setText("")
-        self.label_robot_name.setReadOnly(False)  # Permet la modification
-        tables_layout.addWidget(self.label_robot_name)
+        self.btn_load_th = QPushButton("Charger")
+        self.btn_save_th = QPushButton("Sauvegarder")
+        self.btn_import_me = QPushButton("Importer")
+        self.btn_clear_me = QPushButton("Vider")
+
+        tables_layout.addWidget(QLabel("Configuration robot (DHM nominaux)"))
+        self.label_robot_name_th = QLineEdit()
+        self.label_robot_name_th.setReadOnly(False)  # Permet la modification
+        th_layout.addWidget(self.label_robot_name_th, 0, 0)
+        th_layout.addWidget(self.btn_load_th, 0, 1)
+        th_layout.addWidget(self.btn_save_th, 0, 2)
+        tables_layout.addLayout(th_layout)
 
         self.table_dh = QTableWidget(6, 4)
         self.table_dh.setHorizontalHeaderLabels(["alpha (rad)", "d (mm)", "theta (rad)", "r (mm)"])
@@ -142,14 +151,15 @@ class MGDApp(QMainWindow):
         #self.table_dh.setFixedHeight(200)
         tables_layout.addWidget(self.table_dh)
 
-        tables_layout.addWidget(QLabel("Corrections 6D"))
-        self.table_corr = QTableWidget(6, 6)
-        self.table_corr.setHorizontalHeaderLabels(["Tx(mm)", "Ty(mm)", "Tz(mm)", "Rx(°)", "Ry(°)", "Rz(°)"])
-        self.table_corr.horizontalHeader().setDefaultSectionSize(70)
-        self.table_corr.cellChanged.connect(self.visualiser_3d)
+        tables_layout.addWidget(QLabel("Mesures robot (DHM mesurés)"))
+        self.label_robot_name_me = QLineEdit()
+        self.label_robot_name_me.setReadOnly(False)  # Permet la modification
+        me_layout.addWidget(self.label_robot_name_me, 1, 0)
+        me_layout.addWidget(self.btn_import_me, 1, 1)
+        me_layout.addWidget(self.btn_clear_me, 1, 2)
+        tables_layout.addLayout(me_layout)
 
         #self.table_corr.setFixedHeight(150)
-        tables_layout.addWidget(self.table_corr)
         layout.addLayout(tables_layout)
 
         # Sliders + spinboxes
@@ -188,20 +198,10 @@ class MGDApp(QMainWindow):
 
         # Boutons
         btn_layout = QVBoxLayout()
-        self.btn_calc = QPushButton("Calculer MGD")
-        self.btn_visual = QPushButton("Visualiser 3D")
-        self.btn_step = QPushButton("Affichage pas à pas")
-        self.btn_save = QPushButton("Sauvegarder config")
-        self.btn_load = QPushButton("Charger config")
         self.btn_limits = QPushButton("Configurer les limites d'axes")
-
-        slider_layout.addWidget(self.btn_calc)
-        slider_layout.addWidget(self.btn_visual)
-        slider_layout.addWidget(self.btn_step)
-        slider_layout.addWidget(self.btn_save)
-        slider_layout.addWidget(self.btn_load)
+        self.btn_step = QPushButton("Affichage pas à pas")
         slider_layout.addWidget(self.btn_limits)
-
+        slider_layout.addWidget(self.btn_step)
 
          # Résultat MGD
         self.result_table = QTableWidget(6, 3)
@@ -209,7 +209,15 @@ class MGDApp(QMainWindow):
         self.result_table.setVerticalHeaderLabels(["X (mm)","Y (mm)","Z (mm)", "A (°)","B (°)","C (°)"])
         self.result_table.horizontalHeader().setDefaultSectionSize(80)
         slider_layout.addWidget(self.result_table)
-       
+
+        slider_layout.addWidget(QLabel("Corrections 6D"))
+        self.table_corr = QTableWidget(6, 6)
+        self.table_corr.setHorizontalHeaderLabels(["Tx(mm)", "Ty(mm)", "Tz(mm)", "Rx(°)", "Ry(°)", "Rz(°)"])
+        self.table_corr.horizontalHeader().setDefaultSectionSize(70)
+        self.table_corr.cellChanged.connect(self.visualiser_3d)
+        slider_layout.addWidget(self.table_corr)
+
+
         layout.addLayout(slider_layout)
 
         # Zone viewer PyQtGraph
@@ -233,8 +241,6 @@ class MGDApp(QMainWindow):
         viewer_layout.addLayout(nav_layout)
         layout.addLayout(viewer_layout)
 
-       
-
         # Stocker les transormations
         self.dh_matrices=[np.eye(4)]
         self.corrected_matrices=[np.eye(4)]
@@ -245,11 +251,13 @@ class MGDApp(QMainWindow):
         self.step_index = None
 
         # Connexions
-        self.btn_calc.clicked.connect(self.calculer_mgd)
-        self.btn_visual.clicked.connect(self.visualiser_3d)
         self.btn_step.clicked.connect(self.visualiser_step_by_step)
-        self.btn_save.clicked.connect(self.sauvegarder_config)
-        self.btn_load.clicked.connect(self.charger_config)
+
+        self.btn_save_th.clicked.connect(self.sauvegarder_config)
+        self.btn_load_th.clicked.connect(self.charger_config)
+        #self.btn_import_me.clicked.connect(self.sauvegarder_config)
+        #self.btn_clear_me.clicked.connect(self.charger_config)
+
         self.btn_prev.clicked.connect(self.afficher_repere_precedent)
         self.btn_next.clicked.connect(self.afficher_repere_suivant)
         self.btn_limits.clicked.connect(self.configurer_limites_axes)
@@ -297,6 +305,7 @@ class MGDApp(QMainWindow):
         self.result_table.setItem(0, 0, QTableWidgetItem(f"{self.dh_pos[0]:.2f}"))
         self.result_table.setItem(1, 0, QTableWidgetItem(f"{self.dh_pos[1]:.2f}"))
         self.result_table.setItem(2, 0, QTableWidgetItem(f"{self.dh_pos[2]:.2f}"))
+
         self.result_table.setItem(3, 0, QTableWidgetItem(f"{self.dh_ori[0]:.4f}"))
         self.result_table.setItem(4, 0, QTableWidgetItem(f"{self.dh_ori[1]:.4f}"))
         self.result_table.setItem(5, 0, QTableWidgetItem(f"{self.dh_ori[2]:.4f}"))
@@ -304,6 +313,7 @@ class MGDApp(QMainWindow):
         self.result_table.setItem(0, 1, QTableWidgetItem(f"{self.corrected_pos[0]:.2f}"))
         self.result_table.setItem(1, 1, QTableWidgetItem(f"{self.corrected_pos[1]:.2f}"))
         self.result_table.setItem(2, 1, QTableWidgetItem(f"{self.corrected_pos[2]:.2f}"))
+
         self.result_table.setItem(3, 1, QTableWidgetItem(f"{self.corrected_ori[0]:.4f}"))
         self.result_table.setItem(4, 1, QTableWidgetItem(f"{self.corrected_ori[1]:.4f}"))
         self.result_table.setItem(5, 1, QTableWidgetItem(f"{self.corrected_ori[2]:.4f}"))
@@ -311,6 +321,7 @@ class MGDApp(QMainWindow):
         self.result_table.setItem(0, 2, QTableWidgetItem(f"{self.corrected_pos[0] - self.dh_pos[0]:.2f}"))
         self.result_table.setItem(1, 2, QTableWidgetItem(f"{self.corrected_pos[1] - self.dh_pos[1]:.2f}"))
         self.result_table.setItem(2, 2, QTableWidgetItem(f"{self.corrected_pos[2] - self.dh_pos[2]:.2f}"))
+
         self.result_table.setItem(3, 2, QTableWidgetItem(f"{self.corrected_ori[0] - self.dh_ori[0]:.4f}"))
         self.result_table.setItem(4, 2, QTableWidgetItem(f"{self.corrected_ori[1] - self.dh_ori[1]:.4f}"))
         self.result_table.setItem(5, 2, QTableWidgetItem(f"{self.corrected_ori[2] - self.dh_ori[2]:.4f}"))
@@ -407,7 +418,7 @@ class MGDApp(QMainWindow):
                 "dh": [[self.table_dh.item(i,j).text() if self.table_dh.item(i,j) else "" for j in range(4)] for i in range(6)],
                 "corr": [[self.table_corr.item(i,j).text() if self.table_corr.item(i,j) else "" for j in range(6)] for i in range(6)],
                 "q": [spinbox.value() for spinbox in self.spinboxes_q],
-                "name": [self.label_robot_name.text()],
+                "name": [self.label_robot_name_th.text()],
                 "axis_limits": self.axis_limits
             }
             with open(file_name, "w") as f:
@@ -427,9 +438,9 @@ class MGDApp(QMainWindow):
                     self.spinboxes_q[i].setValue(data["q"][i])
                 
                 if "name" in data and len(data["name"]) > 0:
-                    self.label_robot_name.setText(data["name"][0])
+                    self.label_robot_name_th.setText(data["name"][0])
                 else:
-                    self.label_robot_name.setText("Configuration chargée")
+                    self.label_robot_name_th.setText("Configuration chargée")
                 
                 # Charger et appliquer les limites d'axes
                 if "axis_limits" in data:
