@@ -138,6 +138,7 @@ class MGDApp(QMainWindow):
         self.table_dh = QTableWidget(6, 4)
         self.table_dh.setHorizontalHeaderLabels(["alpha (rad)", "d (mm)", "theta (rad)", "r (mm)"])
         self.table_dh.horizontalHeader().setDefaultSectionSize(90)
+        self.table_dh.cellChanged.connect(self.visualiser_3d)
         #self.table_dh.setFixedHeight(200)
         tables_layout.addWidget(self.table_dh)
 
@@ -145,6 +146,8 @@ class MGDApp(QMainWindow):
         self.table_corr = QTableWidget(6, 6)
         self.table_corr.setHorizontalHeaderLabels(["Tx(mm)", "Ty(mm)", "Tz(mm)", "Rx(°)", "Ry(°)", "Rz(°)"])
         self.table_corr.horizontalHeader().setDefaultSectionSize(70)
+        self.table_corr.cellChanged.connect(self.visualiser_3d)
+
         #self.table_corr.setFixedHeight(150)
         tables_layout.addWidget(self.table_corr)
         layout.addLayout(tables_layout)
@@ -170,7 +173,6 @@ class MGDApp(QMainWindow):
 
             slider.valueChanged.connect(spinbox.setValue)
             spinbox.valueChanged.connect(slider.setValue)
-            spinbox.valueChanged.connect(self.calculer_mgd)
             slider.valueChanged.connect(self.visualiser_3d)
 
             row_layout.addWidget(label)
