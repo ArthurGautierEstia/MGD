@@ -204,8 +204,9 @@ class MGDApp(QMainWindow):
         slider_layout.addWidget(self.btn_step)
 
          # Résultat MGD
+        slider_layout.addWidget(QLabel("Postions cartésiennes"))
         self.result_table = QTableWidget(6, 3)
-        self.result_table.setHorizontalHeaderLabels(["Pos TCP","Pos TCP Corrigée", "Deltas"])
+        self.result_table.setHorizontalHeaderLabels(["Flange","Flange Corr", "Ecarts"])
         self.result_table.setVerticalHeaderLabels(["X (mm)","Y (mm)","Z (mm)", "A (°)","B (°)","C (°)"])
         self.result_table.horizontalHeader().setDefaultSectionSize(80)
         slider_layout.addWidget(self.result_table)
