@@ -11,6 +11,7 @@ from PyQt5.QtGui import QFont
 import pyqtgraph.opengl as gl
 from pyqtgraph.Qt import QtGui
 import pyqtgraph as pg
+from stl import mesh
 
 
 # -------------------------------
@@ -251,11 +252,15 @@ class MGDApp(QMainWindow):
         self.corrected_ori=np.zeros(3)
         self.step_index = None
 
+        #Stocker les mesh importés
+        self.robot_links = []
+
         # Connexions
         self.btn_step.clicked.connect(self.visualiser_step_by_step)
 
         self.btn_save_th.clicked.connect(self.sauvegarder_config)
         self.btn_load_th.clicked.connect(self.charger_config)
+        self.btn_load_th.clicked.connect(self.importer_segment)
         #self.btn_import_me.clicked.connect(self.sauvegarder_config)
         #self.btn_clear_me.clicked.connect(self.charger_config)
 
@@ -334,8 +339,11 @@ class MGDApp(QMainWindow):
         self.ajouter_grille()
         for T in self.dh_matrices:
             self.afficher_repere(T)
+            
         if self.step_index is not None:
             self.afficher_repere_jaune()
+        self.update_segment_pose()
+        
 
     def visualiser_step_by_step(self):
         if self.btn_prev.isVisible() and self.btn_next.isVisible():
@@ -410,7 +418,82 @@ class MGDApp(QMainWindow):
         grid.setSize(x=4000, y=4000, z=0)  # Taille de la grille en mm
         grid.setSpacing(x=200, y=200, z=200)  # Espacement des lignes en mm
         grid.setColor((150, 150, 150, 100))  # Couleur grise semi-transparente
-        self.viewer.addItem(grid) 
+        self.viewer.addItem(grid)
+    
+    def importer_segment(self):
+        """
+        Importe un segment du robot à partir d'un fichier STL et l'affiche
+        selon la transformation homogène T (4x4).
+        """
+        kuka_orange = (1.0,0.4,0.0,1.0)  # Couleur orange KUKA
+        kuka_black = (0.1,0.1,0.1,1.0)   # Couleur noire KUKA
+        kuka_grey = (0.5,0.5,0.5,1.0)    # Couleur grise KUKA
+        for i in range(0,7):
+            chemin_stl = f"./robot/rocky{i}.stl"
+            T=self.dh_matrices[i]
+            if i == 0:
+                kuka_color = kuka_black
+            elif i == 6:
+                kuka_color = kuka_grey
+            else:
+                kuka_color = kuka_orange
+            
+            try:
+                # Charger le STL avec numpy-stl
+                stl_mesh = mesh.Mesh.from_file(chemin_stl)
+                
+                # Extraire les sommets et faces
+                verts = stl_mesh.vectors.reshape(-1, 3)
+                faces = np.arange(len(verts)).reshape(-1, 3)
+                
+                # Créer MeshData
+                mesh_data = gl.MeshData(vertexes=verts, faces=faces)
+                
+                # Créer l'objet 3D
+                mesh_item = gl.GLMeshItem(meshdata=mesh_data, smooth=True, color=kuka_color, shader='shaded')
+                
+                # Appliquer la transformation homogène T
+                pos = T[:3, 3]
+                
+                
+                # Rotation : utiliser la matrice T[:3,:3]
+                # GLMeshItem n'accepte pas directement une matrice, donc on applique des rotations successives
+                R = T[:3, :3]
+                rx = np.degrees(np.arctan2(R[2,1], R[2,2]))
+                ry = np.degrees(np.arctan2(-R[2,0], np.sqrt(R[2,1]**2 + R[2,2]**2)))
+                rz = np.degrees(np.arctan2(R[1,0], R[0,0]))
+                mesh_item.rotate(rx, 1, 0, 0)
+                mesh_item.rotate(ry, 0, 1, 0)
+                mesh_item.rotate(rz, 0, 0, 1)
+                mesh_item.translate(pos[0], pos[1], pos[2])
+                
+                # Ajouter au viewer
+                self.robot_links.append(mesh_item)
+                self.viewer.addItem(mesh_item)
+            except Exception as e:
+                print(f"Erreur lors de l'import du segment: {e}")
+
+    
+    def update_segment_pose(self):
+        for i in range(len(self.robot_links)):
+            mesh_item = self.robot_links[i]
+            T= self.dh_matrices[i]
+            if mesh_item:
+                mesh_item.resetTransform()  # Réinitialise la transformation
+                R = T[:3, :3]
+                pos = T[:3, 3]
+                # Appliquer rotations ZYX
+                rx = np.degrees(np.arctan2(R[2,1], R[2,2]))
+                ry = np.degrees(np.arctan2(-R[2,0], np.sqrt(R[2,1]**2 + R[2,2]**2)))
+                rz = np.degrees(np.arctan2(R[1,0], R[0,0]))
+                mesh_item.rotate(rx, 1, 0, 0)
+                mesh_item.rotate(ry, 0, 1, 0)
+                mesh_item.rotate(rz, 0, 0, 1)
+                mesh_item.translate(pos[0], pos[1], pos[2])
+            self.viewer.addItem(mesh_item)
+
+
+ 
 
     def sauvegarder_config(self):
         file_name, _ = QFileDialog.getSaveFileName(self, "Sauvegarder configuration", "", "JSON Files (*.json)")
@@ -472,6 +555,7 @@ class MGDApp(QMainWindow):
                 self.spinboxes_q[i].setValue(min_val)
             elif current_spinbox_value > max_val:
                 self.spinboxes_q[i].setValue(max_val)
+
 
     def configurer_limites_axes(self):
         """Ouvre le dialogue pour configurer les limites des axes"""
