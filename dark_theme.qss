@@ -1,0 +1,92 @@
+
+/* Global */
+QWidget {
+    background-color: #121212;
+    color: #E0E0E0;
+    font-family: "Roboto", "Segoe UI";
+    font-size: 14px;
+}
+
+/* Boutons */
+QPushButton {
+    background-color: #1E1E1E;
+    color: #E0E0E0;
+    border: none;
+    border-radius: 6px;
+    padding: 8px 16px;
+}
+QPushButton:hover {
+    background-color: #2C2C2C;
+}
+QPushButton:pressed {
+    background-color: #FF6F00; /* Accent orange KUKA */
+    color: #FFFFFF;
+}
+
+/* Tables */
+
+QTableWidget {
+    background-color: #1E1E1E;
+    gridline-color: #2C2C2C;
+    color: #E0E0E0;
+    selection-background-color: #FF6F00;
+    selection-color: #FFFFFF;
+    border: 1px solid #2C2C2C;
+    border-radius: 10px; /* Coins arrondis */
+    padding: 6px;
+}
+
+/* Headers */
+QHeaderView::section {
+    background-color: #1E1E1E;
+    color: #E0E0E0;
+    padding: 8px;
+    border: 1px solid #2C2C2C;
+    border-left:none;
+    border-top: none;
+    border-bottom: 1px solid #2C2C2C;
+    border-radius: 0px;
+}
+
+/* Hover sur cellules */
+QTableWidget::item:hover {
+    background-color: #2C2C2C;
+}
+
+QTableCornerButton::section {
+    background-color: #1E1E1E;
+    border-bottom: 1px solid #2C2C2C;
+    border-right: 1px solid #2C2C2C;
+}
+
+
+
+
+/* Sliders */
+QSlider::groove:horizontal {
+    height: 6px;
+    background: #2C2C2C;
+    border-radius: 3px;
+}
+QSlider::handle:horizontal {
+    background: #FF6F00;
+    width: 14px;
+    border-radius: 7px;
+}
+
+/* SpinBox & LineEdit */
+QSpinBox, QLineEdit {
+    background-color: #1E1E1E;
+    color: #E0E0E0;
+    border: 1px solid #2C2C2C;
+    border-radius: 4px;
+    padding: 4px;
+}
+QSpinBox:focus, QLineEdit:focus {
+    border: 1px solid #FF6F00;
+}
+
+/* Labels */
+QLabel {
+    color: #E0E0E0;
+}

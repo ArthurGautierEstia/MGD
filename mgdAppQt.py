@@ -209,13 +209,13 @@ class MGDApp(QMainWindow):
         self.result_table = QTableWidget(6, 3)
         self.result_table.setHorizontalHeaderLabels(["Flange","Flange Corr", "Ecarts"])
         self.result_table.setVerticalHeaderLabels(["X (mm)","Y (mm)","Z (mm)", "A (°)","B (°)","C (°)"])
-        self.result_table.horizontalHeader().setDefaultSectionSize(80)
+        self.result_table.horizontalHeader().setDefaultSectionSize(110)
         slider_layout.addWidget(self.result_table)
 
         slider_layout.addWidget(QLabel("Corrections 6D"))
         self.table_corr = QTableWidget(6, 6)
         self.table_corr.setHorizontalHeaderLabels(["Tx(mm)", "Ty(mm)", "Tz(mm)", "Rx(°)", "Ry(°)", "Rz(°)"])
-        self.table_corr.horizontalHeader().setDefaultSectionSize(70)
+        self.table_corr.horizontalHeader().setDefaultSectionSize(80)
         self.table_corr.cellChanged.connect(self.visualiser_3d)
         slider_layout.addWidget(self.table_corr)
 
@@ -228,7 +228,7 @@ class MGDApp(QMainWindow):
         self.viewer.opts['glOptions'] = 'opaque'
         self.viewer.opts['depth'] = True
         self.viewer.setCameraPosition(distance=1500)
-        self.viewer.setMinimumSize(600, 400)
+        self.viewer.setMinimumSize(900, 400)
         self.viewer.setBackgroundColor(45, 45, 48, 255)  # Gris clair
         self.ajouter_grille()
         viewer_layout.addWidget(self.viewer)
@@ -568,6 +568,9 @@ class MGDApp(QMainWindow):
 
 if __name__ == "__main__":
     app = QApplication(sys.argv)
+    with open("dark_theme.qss", "r") as f:
+        app.setStyleSheet(f.read())
+
     window = MGDApp()
     window.showMaximized()
     sys.exit(app.exec_())
