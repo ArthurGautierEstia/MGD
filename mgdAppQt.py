@@ -204,6 +204,9 @@ class MGDApp(QMainWindow):
         #self.table_me.cellChanged.connect(self.visualiser_3d)
         tables_layout.addWidget(self.table_me)
 
+        self.btn_calculate_corr = QPushButton("Calculer les corrections")
+        tables_layout.addWidget(self.btn_calculate_corr)
+
         layout.addLayout(tables_layout)
 
         # Sliders + spinboxes
@@ -315,6 +318,7 @@ class MGDApp(QMainWindow):
         self.btn_load_th.clicked.connect(self.charger_config)
         self.btn_import_me.clicked.connect(self.importer_mesures)
         self.btn_clear_me.clicked.connect(self.vider_mesures)
+        self.btn_calculate_corr.clicked.connect(self.calculer_ecarts_dh_me)
         
         self.btn_prev.clicked.connect(self.afficher_repere_precedent)
         self.btn_next.clicked.connect(self.afficher_repere_suivant)
@@ -335,6 +339,20 @@ class MGDApp(QMainWindow):
             theta = theta_offset + q
             corr = [get_cell_value(self.table_corr, i, j) for j in range(6)]
             params.append((alpha, d, theta, r, corr))
+        return params
+
+    def lire_parametres_me(self):
+        """Lit les paramètres mesurés de la table_me"""
+        params = []
+        for i in range(6):
+            alpha = np.radians(get_cell_value(self.table_me, i, 0))
+            d     = get_cell_value(self.table_me, i, 1)
+            theta_offset = np.radians(get_cell_value(self.table_me, i, 2))
+            r     = get_cell_value(self.table_me, i, 3)
+            q_deg = self.spinboxes_q[i].value()
+            q = np.radians(q_deg)
+            theta = theta_offset + q
+            params.append((alpha, d, theta, r))
         return params
 
     def calculer_mgd(self):
@@ -381,6 +399,8 @@ class MGDApp(QMainWindow):
         self.result_table.setItem(3, 2, QTableWidgetItem(f"{self.corrected_ori[0] - self.dh_ori[0]:.4f}"))
         self.result_table.setItem(4, 2, QTableWidgetItem(f"{self.corrected_ori[1] - self.dh_ori[1]:.4f}"))
         self.result_table.setItem(5, 2, QTableWidgetItem(f"{self.corrected_ori[2] - self.dh_ori[2]:.4f}"))
+        
+
 
     def visualiser_3d(self):
         self.calculer_mgd()
@@ -658,13 +678,68 @@ class MGDApp(QMainWindow):
                 if "name" in data and len(data["name"]) > 0:
                     self.label_robot_name_me.setText(data["name"][0])
                 else:
-                    self.label_robot_name_me.setText("Mesures chargées")            
+                    self.label_robot_name_me.setText("Mesures chargées")
+
             except Exception as e:
                 print(f"Erreur lors de l'importation des mesures: {e}")
+        
 
     def vider_mesures(self):
         self.table_me.clearContents()
         self.label_robot_name_me.setText("")  
+
+    def calculer_ecarts_dh_me(self):
+        """Calcule les écarts entre les matrices DH et ME et les affiche dans table_corr"""
+        try:
+            # Vérifier que table_me contient des données
+            if not self.table_me.item(0, 0) or self.table_me.item(0, 0).text() == "":
+                return
+            
+            # Lire les paramètres mesurés
+            params_me = self.lire_parametres_me()
+            
+            # Calculer les matrices ME
+            T_me = np.eye(4)
+            
+            for i, (alpha, d, theta, r) in enumerate(params_me):
+                T_dh = self.dh_matrices[i+1]  # Récupérer la matrice DH déjà calculée
+                T_me = T_me @ dh_modified(alpha, d, theta, r)
+                
+                # Écart de position
+                delta_pos = T_me[:3, 3] - T_dh[:3, 3]
+                
+                # Écart d'orientation : matrice de rotation d'erreur
+                R_dh = T_dh[:3, :3]
+                R_me = T_me[:3, :3]
+                
+                # Matrice de rotation d'erreur relative : R_error = R_me @ R_dh^T
+                R_error = R_me @ R_dh.T
+                
+                # Extraire les angles Euler ZYX de la matrice d'erreur
+                # ZYX: Rz(rz) @ Ry(ry) @ Rx(rx)
+                # R[2,0] = -sin(ry)
+                ry_error = np.degrees(np.arcsin(-R_error[2, 0]))
+                
+                # Quand cos(ry) != 0
+                if np.abs(np.cos(np.radians(ry_error))) > 1e-6:
+                    rx_error = np.degrees(np.arctan2(R_error[2, 1], R_error[2, 2]))
+                    rz_error = np.degrees(np.arctan2(R_error[1, 0], R_error[0, 0]))
+                else:
+                    # Singularité: fixer rx_error = 0 et calculer rz_error
+                    rx_error = 0
+                    rz_error = np.degrees(np.arctan2(-R_error[0, 1], R_error[1, 1]))
+                
+                # Afficher les écarts dans la table_corr
+                # Colonnes: Tx, Ty, Tz, Rx, Ry, Rz
+                self.table_corr.setItem(i, 0, QTableWidgetItem(f"{delta_pos[0]:.2f}"))
+                self.table_corr.setItem(i, 1, QTableWidgetItem(f"{delta_pos[1]:.2f}"))
+                self.table_corr.setItem(i, 2, QTableWidgetItem(f"{delta_pos[2]:.2f}"))
+                self.table_corr.setItem(i, 3, QTableWidgetItem(f"{rx_error:.4f}"))
+                self.table_corr.setItem(i, 4, QTableWidgetItem(f"{ry_error:.4f}"))
+                self.table_corr.setItem(i, 5, QTableWidgetItem(f"{rz_error:.4f}"))
+        
+        except Exception as e:
+            print(f"Erreur lors du calcul des écarts: {e}")  
 
 if __name__ == "__main__":
     app = QApplication(sys.argv)
