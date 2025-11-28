@@ -61,18 +61,19 @@ def correction_6d(T, tx, ty, tz, rx, ry, rz):
 # Classe pour configurer les limites des axes
 # -------------------------------
 class AxisLimitsDialog(QDialog):
-    def __init__(self, parent, current_limits):
+    def __init__(self, parent, current_limits, home_position=None):
         super().__init__(parent)
-        self.setWindowTitle("Configurer les limites d'axes")
-        self.setGeometry(100, 100, 400, 400)
+        self.setWindowTitle("Paramètrage des axes")
+        self.setGeometry(100, 100, 500, 400)
         self.current_limits = current_limits
+        self.home_position = home_position if home_position else [0, -90, 90, 0, 90, 0]
         
         limits_layout = QVBoxLayout()
         
-        # Créer une table pour les limites
-        self.table_limits = QTableWidget(6, 2)
-        self.table_limits.setHorizontalHeaderLabels(["Min (°)", "Max (°)"])
-        self.table_limits.horizontalHeader().setDefaultSectionSize(90)
+        # Créer une table pour les limites avec colonne Home Position
+        self.table_limits = QTableWidget(6, 3)
+        self.table_limits.setHorizontalHeaderLabels(["Min (°)", "Max (°)", "Home (°)"])
+        self.table_limits.horizontalHeader().setDefaultSectionSize(100)
         limits_layout.addWidget(self.table_limits)
         
         # Initialiser la table avec les valeurs actuelles
@@ -87,6 +88,10 @@ class AxisLimitsDialog(QDialog):
             # Max value
             max_item = QTableWidgetItem(str(current_limits[i][1]))
             self.table_limits.setItem(i, 1, max_item)
+            
+            # Home Position
+            home_item = QTableWidgetItem(str(self.home_position[i]))
+            self.table_limits.setItem(i, 2, home_item)
         
         # Boutons
         btn_layout = QHBoxLayout()
@@ -110,6 +115,14 @@ class AxisLimitsDialog(QDialog):
             max_val = int(self.table_limits.item(i, 1).text())
             limits.append((min_val, max_val))
         return limits
+    
+    def get_home_position(self):
+        """Retourne la position home configurée"""
+        home_pos = []
+        for i in range(6):
+            home_val = int(self.table_limits.item(i, 2).text())
+            home_pos.append(home_val)
+        return home_pos
 
 # -------------------------------
 # Classe principale PyQt5
@@ -117,8 +130,8 @@ class AxisLimitsDialog(QDialog):
 class MGDApp(QMainWindow):
     def __init__(self):
         super().__init__()
-        self.setWindowTitle("MGD Robot - PyQtGraph")
-        self.resize(1400, 800)
+        self.setWindowTitle("MGD Robot Compensator")
+        self.resize(2000, 1100)
 
         central_widget = QWidget()
         self.setCentralWidget(central_widget)
@@ -126,6 +139,9 @@ class MGDApp(QMainWindow):
 
         # Initialiser les limites des axes (par défaut -180 à 180)
         self.axis_limits = [(-180, 180) for _ in range(6)]
+        
+        # Initialiser la position home (par défaut (0, -90, 90, 0, 90, 0))
+        self.home_position = [0, -90, 90, 0, 90, 0]
 
         # Zone tables
         tables_layout = QVBoxLayout()
@@ -202,15 +218,24 @@ class MGDApp(QMainWindow):
         
         # Boutons
         btn_layout = QVBoxLayout()
-        self.btn_limits = QPushButton("Configurer les limites d'axes")
+        btn_grid = QGridLayout()
+
+        self.btn_limits = QPushButton("Paramètrage des axes")
+        self.btn_home_position = QPushButton("Position Home")
+
+
+        btn_grid.addWidget(self.btn_limits, 0, 0)
+        btn_grid.addWidget(self.btn_home_position, 0, 1)
+        btn_layout.addLayout(btn_grid)
+        slider_layout.addLayout(btn_layout)
+        
         self.btn_step = QPushButton("Affichage pas à pas")
-        slider_layout.addWidget(self.btn_limits)
         slider_layout.addWidget(self.btn_step)
 
          # Résultat MGD
         slider_layout.addWidget(QLabel("Postions cartésiennes"))
         self.result_table = QTableWidget(6, 3)
-        self.result_table.setHorizontalHeaderLabels(["Flange","Flange Corr", "Ecarts"])
+        self.result_table.setHorizontalHeaderLabels(["TCP","TCP Corr", "Ecarts"])
         self.result_table.setVerticalHeaderLabels(["X (mm)","Y (mm)","Z (mm)", "A (°)","B (°)","C (°)"])
         self.result_table.horizontalHeader().setDefaultSectionSize(110)
         slider_layout.addWidget(self.result_table)
@@ -265,13 +290,11 @@ class MGDApp(QMainWindow):
 
         self.btn_save_th.clicked.connect(self.sauvegarder_config)
         self.btn_load_th.clicked.connect(self.charger_config)
-        #self.btn_load_th.clicked.connect(self.importer_segment)
-        #self.btn_import_me.clicked.connect(self.sauvegarder_config)
-        #self.btn_clear_me.clicked.connect(self.charger_config)
-
+        
         self.btn_prev.clicked.connect(self.afficher_repere_precedent)
         self.btn_next.clicked.connect(self.afficher_repere_suivant)
         self.btn_limits.clicked.connect(self.configurer_limites_axes)
+        self.btn_home_position.clicked.connect(self.appliquer_home_position)
 
         self.matrices_step = []
         
@@ -442,7 +465,8 @@ class MGDApp(QMainWindow):
                 "corr": [[self.table_corr.item(i,j).text() if self.table_corr.item(i,j) else "" for j in range(6)] for i in range(6)],
                 "q": [spinbox.value() for spinbox in self.spinboxes_q],
                 "name": [self.label_robot_name_th.text()],
-                "axis_limits": self.axis_limits
+                "axis_limits": self.axis_limits,
+                "home_position": self.home_position
             }
             with open(file_name, "w") as f:
                 json.dump(data, f, indent=4)
@@ -470,6 +494,12 @@ class MGDApp(QMainWindow):
                     if "axis_limits" in data:
                         self.axis_limits = data["axis_limits"]
                         self.mettre_a_jour_limites_axes()
+                    
+                    # Charger et appliquer la home position
+                    if "home_position" in data:
+                        self.home_position = data["home_position"]
+                    else:
+                        self.home_position = [0, -90, 90, 0, 90, 0]
                     
                     # Vérifier si c'est une nouvelle configuration
                     if self.current_config_file != file_name:
@@ -576,12 +606,20 @@ class MGDApp(QMainWindow):
 
     def configurer_limites_axes(self):
         """Ouvre le dialogue pour configurer les limites des axes"""
-        dialog = AxisLimitsDialog(self, self.axis_limits)
+        dialog = AxisLimitsDialog(self, self.axis_limits, self.home_position)
         if dialog.exec_() == QDialog.Accepted:
             # Récupérer les nouvelles limites
             self.axis_limits = dialog.get_limits()
+            # Récupérer la nouvelle home position
+            self.home_position = dialog.get_home_position()
             # Appliquer les nouvelles limites
             self.mettre_a_jour_limites_axes()
+
+    def appliquer_home_position(self):
+        """Applique la home position aux sliders et spinboxes"""
+        for i in range(6):
+            self.sliders_q[i].setValue(self.home_position[i])
+            self.spinboxes_q[i].setValue(self.home_position[i])
 
 if __name__ == "__main__":
     app = QApplication(sys.argv)
@@ -589,5 +627,7 @@ if __name__ == "__main__":
         app.setStyleSheet(f.read())
 
     window = MGDApp()
-    window.showMaximized()
+    #window.showMaximized()
+    window.show()
+
     sys.exit(app.exec_())
