@@ -58,7 +58,7 @@ def correction_6d(T, tx, ty, tz, rx, ry, rz):
     return T @ corr
 
 # -------------------------------
-# Classe pour configurer les limites des axes
+# Classe pour le paramétrage des axes
 # -------------------------------
 class AxisLimitsDialog(QDialog):
     def __init__(self, parent, current_limits, home_position=None):
@@ -106,6 +106,18 @@ class AxisLimitsDialog(QDialog):
         limits_layout.addLayout(btn_layout)
         
         self.setLayout(limits_layout)
+        
+        # Centrer la fenêtre sur l'écran
+        self.center_on_screen()
+    
+    def center_on_screen(self):
+        """Centre la fenêtre de dialogue sur l'écran"""
+        screen_geometry = QApplication.primaryScreen().geometry()
+        dialog_width = self.width()
+        dialog_height = self.height()
+        x = (screen_geometry.width() - dialog_width) // 2
+        y = (screen_geometry.height() - dialog_height) // 2
+        self.move(x, y)
     
     def get_limits(self):
         """Retourne les nouvelles limites configurées"""
@@ -145,42 +157,53 @@ class MGDApp(QMainWindow):
 
         # Zone tables
         tables_layout = QVBoxLayout()
+
         th_layout = QGridLayout()
-        me_layout = QGridLayout()
-
-        self.cad_cb = QCheckBox("CAD")
-        self.btn_load_th = QPushButton("Charger")
-        self.btn_save_th = QPushButton("Sauvegarder")
-        self.btn_import_me = QPushButton("Importer")
-        self.btn_clear_me = QPushButton("Vider")
-
         tables_layout.addWidget(QLabel("Configuration robot (DHM nominaux)"))
+        
         self.label_robot_name_th = QLineEdit()
         self.label_robot_name_th.setReadOnly(False)  # Permet la modification
         th_layout.addWidget(self.label_robot_name_th, 0, 0)
-        th_layout.addWidget(self.cad_cb, 0, 1)
-        self.cad_cb.stateChanged.connect(self.basculer_visibilite_robot)
 
+        self.cad_cb = QCheckBox("CAD")
+        self.cad_cb.stateChanged.connect(self.basculer_visibilite_robot)
+        th_layout.addWidget(self.cad_cb, 0, 1)
+
+        self.btn_load_th = QPushButton("Charger")
         th_layout.addWidget(self.btn_load_th, 0, 2)
+
+        self.btn_save_th = QPushButton("Sauvegarder")
         th_layout.addWidget(self.btn_save_th, 0, 3)
+        
         tables_layout.addLayout(th_layout)
 
         self.table_dh = QTableWidget(6, 4)
-        self.table_dh.setHorizontalHeaderLabels(["alpha (rad)", "d (mm)", "theta (rad)", "r (mm)"])
+        self.table_dh.setHorizontalHeaderLabels(["alpha (°)", "d (mm)", "theta (°)", "r (mm)"])
         self.table_dh.horizontalHeader().setDefaultSectionSize(90)
         self.table_dh.cellChanged.connect(self.visualiser_3d)
-        #self.table_dh.setFixedHeight(200)
         tables_layout.addWidget(self.table_dh)
 
+        me_layout = QGridLayout()
         tables_layout.addWidget(QLabel("Mesures robot (DHM mesurés)"))
+
         self.label_robot_name_me = QLineEdit()
         self.label_robot_name_me.setReadOnly(False)  # Permet la modification
         me_layout.addWidget(self.label_robot_name_me, 1, 0)
+
+        self.btn_import_me = QPushButton("Importer")
         me_layout.addWidget(self.btn_import_me, 1, 1)
+
+        self.btn_clear_me = QPushButton("Vider")
         me_layout.addWidget(self.btn_clear_me, 1, 2)
+
         tables_layout.addLayout(me_layout)
 
-        #self.table_corr.setFixedHeight(150)
+        self.table_me = QTableWidget(6, 4)
+        self.table_me.setHorizontalHeaderLabels(["alpha (°)", "d (mm)", "theta (°)", "r (mm)"])
+        self.table_me.horizontalHeader().setDefaultSectionSize(90)
+        #self.table_me.cellChanged.connect(self.visualiser_3d)
+        tables_layout.addWidget(self.table_me)
+
         layout.addLayout(tables_layout)
 
         # Sliders + spinboxes
@@ -221,7 +244,7 @@ class MGDApp(QMainWindow):
         btn_grid = QGridLayout()
 
         self.btn_limits = QPushButton("Paramètrage des axes")
-        self.btn_home_position = QPushButton("Position Home")
+        self.btn_home_position = QPushButton("Position home")
 
 
         btn_grid.addWidget(self.btn_limits, 0, 0)
@@ -233,7 +256,7 @@ class MGDApp(QMainWindow):
         slider_layout.addWidget(self.btn_step)
 
          # Résultat MGD
-        slider_layout.addWidget(QLabel("Postions cartésiennes"))
+        slider_layout.addWidget(QLabel("Positions cartésiennes"))
         self.result_table = QTableWidget(6, 3)
         self.result_table.setHorizontalHeaderLabels(["TCP","TCP Corr", "Ecarts"])
         self.result_table.setVerticalHeaderLabels(["X (mm)","Y (mm)","Z (mm)", "A (°)","B (°)","C (°)"])
@@ -290,6 +313,8 @@ class MGDApp(QMainWindow):
 
         self.btn_save_th.clicked.connect(self.sauvegarder_config)
         self.btn_load_th.clicked.connect(self.charger_config)
+        self.btn_import_me.clicked.connect(self.importer_mesures)
+        self.btn_clear_me.clicked.connect(self.vider_mesures)
         
         self.btn_prev.clicked.connect(self.afficher_repere_precedent)
         self.btn_next.clicked.connect(self.afficher_repere_suivant)
@@ -301,9 +326,9 @@ class MGDApp(QMainWindow):
     def lire_parametres(self):
         params = []
         for i in range(6):
-            alpha = get_cell_value(self.table_dh, i, 0)
+            alpha = np.radians(get_cell_value(self.table_dh, i, 0))
             d     = get_cell_value(self.table_dh, i, 1)
-            theta_offset = get_cell_value(self.table_dh, i, 2)
+            theta_offset = np.radians(get_cell_value(self.table_dh, i, 2))
             r     = get_cell_value(self.table_dh, i, 3)
             q_deg = self.spinboxes_q[i].value()
             q = np.radians(q_deg)
@@ -620,6 +645,26 @@ class MGDApp(QMainWindow):
         for i in range(6):
             self.sliders_q[i].setValue(self.home_position[i])
             self.spinboxes_q[i].setValue(self.home_position[i])
+
+    def importer_mesures(self):
+        file_name, _ = QFileDialog.getOpenFileName(self, "Importer mesures", "", "JSON Files (*.json)")
+        if file_name:
+            try:
+                with open(file_name, "r") as f:
+                    data = json.load(f)
+                for i in range(6):
+                    for j in range(4):
+                        self.table_me.setItem(i,j,QTableWidgetItem(data["dh"][i][j]))
+                if "name" in data and len(data["name"]) > 0:
+                    self.label_robot_name_me.setText(data["name"][0])
+                else:
+                    self.label_robot_name_me.setText("Mesures chargées")            
+            except Exception as e:
+                print(f"Erreur lors de l'importation des mesures: {e}")
+
+    def vider_mesures(self):
+        self.table_me.clearContents()
+        self.label_robot_name_me.setText("")  
 
 if __name__ == "__main__":
     app = QApplication(sys.argv)
