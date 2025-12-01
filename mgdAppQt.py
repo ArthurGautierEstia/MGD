@@ -260,10 +260,34 @@ class MGDApp(QMainWindow):
 
          # Résultat MGD
         slider_layout.addWidget(QLabel("Positions cartésiennes"))
-        self.result_table = QTableWidget(6, 3)
-        self.result_table.setHorizontalHeaderLabels(["TCP","TCP Corr", "Ecarts"])
+        self.result_table = QTableWidget(6, 4)
+        self.result_table.setHorizontalHeaderLabels(["TCP","TCP Corr", "Ecarts", "Jog"])
         self.result_table.setVerticalHeaderLabels(["X (mm)","Y (mm)","Z (mm)", "A (°)","B (°)","C (°)"])
         self.result_table.horizontalHeader().setDefaultSectionSize(110)
+
+        # Ajouter les boutons + et - dans la colonne 3
+        for row in range(6):
+            # Créer les boutons
+            btn_plus = QPushButton("+")
+            btn_minus = QPushButton("-")
+
+            # Connecter les boutons à la fonction d'incrément
+            btn_plus.clicked.connect(lambda _, r=row: self.increment_value(r, +1))
+            btn_minus.clicked.connect(lambda _, r=row: self.increment_value(r, -1))
+
+            # Créer un layout horizontal pour les deux boutons
+            btn_layout = QHBoxLayout()
+            btn_layout.addWidget(btn_minus)
+            btn_layout.addWidget(btn_plus)
+            btn_layout.setContentsMargins(0, 0, 0, 0)
+
+            # Créer un widget conteneur pour le layout
+            cell_widget = QWidget()
+            cell_widget.setLayout(btn_layout)
+
+            # Insérer le widget dans la cellule (colonne 3 par exemple)
+            self.result_table.setCellWidget(row, 3, cell_widget)
+
         slider_layout.addWidget(self.result_table)
 
         slider_layout.addWidget(QLabel("Corrections 6D"))
@@ -724,6 +748,36 @@ class MGDApp(QMainWindow):
         
         except Exception as e:
             QMessageBox.critical(self, "Erreur", f"Erreur lors du calcul des écarts: {e}")
+
+    def increment_value(self, row, delta):
+        """Incrémente ou décrémente la valeur dans la colonne 0 de la ligne donnée"""
+        item_tcp = self.result_table.item(row, 0)
+        item_tcp_corr = self.result_table.item(row, 1)
+
+        if item_tcp is None:
+            item_tcp = QTableWidgetItem("0.00")
+            self.result_table.setItem(row, 0, item_tcp)
+
+        if item_tcp_corr is None:
+            item_tcp_corr = QTableWidgetItem("0.00")
+            self.result_table.setItem(row, 1, item_tcp_corr)   
+
+        if item_tcp:
+            try:
+                value_tcp = float(item_tcp.text())
+            except ValueError:
+                value_tcp = 0.0
+            value_tcp += delta
+            item_tcp.setText(f"{value_tcp:.2f}")
+
+        if item_tcp_corr:
+            try:
+                value_tcp_corr = float(item_tcp_corr.text())
+            except ValueError:
+                value_tcp = 0.0
+            value_tcp_corr += delta
+            item_tcp_corr.setText(f"{value_tcp_corr:.2f}")
+
 
 if __name__ == "__main__":
     app = QApplication(sys.argv)
