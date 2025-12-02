@@ -348,10 +348,22 @@ class MGDApp(QMainWindow):
         self.viewer.setBackgroundColor(45, 45, 48, 255)  # Gris clair
         self.ajouter_grille()
         viewer_layout.addWidget(self.viewer)
+        
+        
+
+        toggle_layout = QHBoxLayout()
+        self.show_axes = True
+        self.transparency_enabled = False
+        self.btn_toggle_transparency = QPushButton("Transparence")
+        self.btn_toggle_axes = QPushButton("Repères")
+        toggle_layout.addWidget(self.btn_toggle_transparency)
+        toggle_layout.addWidget(self.btn_toggle_axes)
+        viewer_layout.addLayout(toggle_layout)
+
 
         nav_layout = QHBoxLayout()
-        self.btn_prev = QPushButton("Précédent")
-        self.btn_next = QPushButton("Suivant")
+        self.btn_prev = QPushButton("Repère précédent")
+        self.btn_next = QPushButton("Repère suivant")
         self.btn_prev.setVisible(False)
         self.btn_next.setVisible(False)
         nav_layout.addWidget(self.btn_prev)
@@ -387,6 +399,11 @@ class MGDApp(QMainWindow):
         self.btn_next.clicked.connect(self.afficher_repere_suivant)
         self.btn_limits.clicked.connect(self.configurer_limites_axes)
         self.btn_home_position.clicked.connect(self.appliquer_home_position)
+        
+        self.btn_toggle_transparency.clicked.connect(self.toggle_transparency)
+        self.btn_toggle_axes.clicked.connect(self.toggle_axes)
+        
+
 
         self.matrices_step = []
         
@@ -473,12 +490,13 @@ class MGDApp(QMainWindow):
         self.calculer_mgd()
         self.viewer.clear()
         self.ajouter_grille()
-        for T in self.dh_matrices:
-            self.afficher_repere(T)
-            
-        if self.step_index is not None:
-            self.afficher_repere_jaune()
+        if self.show_axes:
+            for T in self.dh_matrices:
+                self.afficher_repere(T)
+            if self.step_index is not None:
+                self.afficher_repere_jaune()
         self.update_segment_pose()
+
         
     def visualiser_step_by_step(self):
         if self.btn_prev.isVisible() and self.btn_next.isVisible():
@@ -891,6 +909,20 @@ class MGDApp(QMainWindow):
         # Ligne 4 : Axe Z
         for j in range(3):
             self.table_me.setItem(4, j, QTableWidgetItem(f"{R[j,2]:.6f}"))
+
+    def toggle_transparency(self):
+        self.transparency_enabled = not self.transparency_enabled
+        for mesh_item in self.robot_links:
+            if self.transparency_enabled:
+                mesh_item.setGLOptions('translucent')
+            else:
+                mesh_item.setGLOptions('opaque')
+    
+    def toggle_axes(self):
+        self.show_axes = not self.show_axes
+        self.visualiser_3d()
+
+
 
 
 
