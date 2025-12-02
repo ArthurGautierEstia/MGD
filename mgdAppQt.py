@@ -180,7 +180,6 @@ class MGDApp(QMainWindow):
         tables_layout.addLayout(th_layout)
 
         self.table_dh = QTableWidget(7, 4)
-        self.table_dh = QTableWidget(6, 4)
         self.table_dh.setHorizontalHeaderLabels(["alpha (°)", "d (mm)", "theta (°)", "r (mm)"])
         self.table_dh.setHorizontalScrollMode(QAbstractItemView.ScrollPerPixel)
         self.table_dh.setVerticalScrollMode(QAbstractItemView.ScrollPerPixel)
