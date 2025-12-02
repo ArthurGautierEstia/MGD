@@ -2,7 +2,7 @@ import sys
 import json
 import numpy as np
 from PyQt5.QtWidgets import (
-    QApplication, QMainWindow, QWidget, QVBoxLayout, QHBoxLayout, QGridLayout,
+    QApplication, QMainWindow, QWidget, QVBoxLayout, QHBoxLayout, QGridLayout, QTreeWidget, QTreeWidgetItem, QMenu,
     QTableWidget, QTableWidgetItem, QPushButton, QLabel, QSlider, QSpinBox, QFileDialog, QLineEdit, QCheckBox, QMessageBox,
     QDialog, QSpinBox as ConfigSpinBox
 )
@@ -159,7 +159,9 @@ class MGDApp(QMainWindow):
         tables_layout = QVBoxLayout()
 
         th_layout = QGridLayout()
-        tables_layout.addWidget(QLabel("Configuration robot (DHM nominaux)"))
+        titre1 = QLabel("Configuration robot")
+        titre1.setStyleSheet("font-size: 16px; font-weight: bold;")
+        tables_layout.addWidget(titre1)
         
         self.label_robot_name_th = QLineEdit()
         self.label_robot_name_th.setReadOnly(False)  # Permet la modification
@@ -176,7 +178,6 @@ class MGDApp(QMainWindow):
         th_layout.addWidget(self.btn_save_th, 0, 3)
         
         tables_layout.addLayout(th_layout)
-
         self.table_dh = QTableWidget(6, 4)
         self.table_dh.setHorizontalHeaderLabels(["alpha (°)", "d (mm)", "theta (°)", "r (mm)"])
         self.table_dh.horizontalHeader().setDefaultSectionSize(90)
@@ -184,35 +185,55 @@ class MGDApp(QMainWindow):
         tables_layout.addWidget(self.table_dh)
 
         me_layout = QGridLayout()
-        tables_layout.addWidget(QLabel("Mesures robot (DHM mesurés)"))
+        titre2 = QLabel("Mesures robot")
+        titre2.setStyleSheet("font-size: 16px; font-weight: bold;")
+        tables_layout.addWidget(titre2)
 
         self.label_robot_name_me = QLineEdit()
         self.label_robot_name_me.setReadOnly(False)  # Permet la modification
-        me_layout.addWidget(self.label_robot_name_me, 1, 0)
+        me_layout.addWidget(self.label_robot_name_me, 0, 0)
 
         self.btn_import_me = QPushButton("Importer")
-        me_layout.addWidget(self.btn_import_me, 1, 1)
+        me_layout.addWidget(self.btn_import_me, 0, 1)
+
+        self.tree = QTreeWidget()
+        self.tree.setHeaderLabels(["Repères"])
+        me_layout.addWidget(self.tree, 1, 0)
+        
+        # Connecter le clic sur un item
+        self.tree.itemClicked.connect(self.display_repere)
+
+        tables_btn_layout = QVBoxLayout()
 
         self.btn_clear_me = QPushButton("Vider")
-        me_layout.addWidget(self.btn_clear_me, 1, 2)
+        self.btn_set_as_ref = QPushButton("Référence")
+        self.btn_save_frames = QPushButton("Sauvegarder")
+        self.btn_calculate_corr = QPushButton("Calculer")
+
+        tables_btn_layout.addWidget(self.btn_clear_me)
+        tables_btn_layout.addWidget(self.btn_set_as_ref)
+        tables_btn_layout.addWidget(self.btn_save_frames)
+        tables_btn_layout.addWidget(self.btn_calculate_corr)
+
+        tables_btn_layout.addStretch()
+        me_layout.addLayout(tables_btn_layout, 1, 1)
+
 
         tables_layout.addLayout(me_layout)
 
-        self.table_me = QTableWidget(6, 4)
-        self.table_me.setHorizontalHeaderLabels(["alpha (°)", "d (mm)", "theta (°)", "r (mm)"])
-        self.table_me.horizontalHeader().setDefaultSectionSize(90)
-        #self.table_me.cellChanged.connect(self.visualiser_3d)
+        self.table_me = QTableWidget(5, 3)
+        self.table_me.setHorizontalHeaderLabels(["X", "Y", "Z"])
+        self.table_me.setVerticalHeaderLabels(["Translation (mm)", "Rotation (°)", "X axis", "Y axis", "Z axis",])
         tables_layout.addWidget(self.table_me)
-
-        self.btn_calculate_corr = QPushButton("Calculer les corrections")
-        tables_layout.addWidget(self.btn_calculate_corr)
 
         layout.addLayout(tables_layout)
 
         # Sliders + spinboxes
 
         slider_layout = QVBoxLayout()
-        slider_layout.addWidget(QLabel("Coordonnées articulaires"))
+        titre3 = QLabel("Coordonnées articulaires")
+        titre3.setStyleSheet("font-size: 16px; font-weight: bold;")
+        slider_layout.addWidget(titre3)
         self.sliders_q = []
         self.spinboxes_q = []
 
@@ -259,7 +280,9 @@ class MGDApp(QMainWindow):
         slider_layout.addWidget(self.btn_step)
 
          # Résultat MGD
-        slider_layout.addWidget(QLabel("Positions cartésiennes"))
+        titre4 = QLabel("Positions cartésiennes")
+        titre4.setStyleSheet("font-size: 16px; font-weight: bold;")
+        slider_layout.addWidget(titre4)
         self.result_table = QTableWidget(6, 4)
         self.result_table.setHorizontalHeaderLabels(["TCP","TCP Corr", "Ecarts", "Jog"])
         self.result_table.setVerticalHeaderLabels(["X (mm)","Y (mm)","Z (mm)", "A (°)","B (°)","C (°)"])
@@ -290,7 +313,9 @@ class MGDApp(QMainWindow):
 
         slider_layout.addWidget(self.result_table)
 
-        slider_layout.addWidget(QLabel("Corrections 6D"))
+        titre5 = QLabel("Corrections 6D")
+        titre5.setStyleSheet("font-size: 16px; font-weight: bold;")
+        slider_layout.addWidget(titre5)
         self.table_corr = QTableWidget(6, 6)
         self.table_corr.setHorizontalHeaderLabels(["Tx(mm)", "Ty(mm)", "Tz(mm)", "Rx(°)", "Ry(°)", "Rz(°)"])
         self.table_corr.horizontalHeader().setDefaultSectionSize(80)
@@ -689,25 +714,53 @@ class MGDApp(QMainWindow):
             self.spinboxes_q[i].setValue(self.home_position[i])
 
     def importer_mesures(self):
-        file_name, _ = QFileDialog.getOpenFileName(self, "Importer mesures", "", "JSON Files (*.json)")
+        file_name, _ = QFileDialog.getOpenFileName(self, "Importer JSON", "", "JSON Files (*.json)")
         if file_name:
-            try:
-                with open(file_name, "r") as f:
-                    data = json.load(f)
-                for i in range(6):
-                    for j in range(4):
-                        self.table_me.setItem(i,j,QTableWidgetItem(data["dh"][i][j]))
-                if "name" in data and len(data["name"]) > 0:
-                    self.label_robot_name_me.setText(data["name"][0])
-                else:
-                    self.label_robot_name_me.setText("Mesures chargées")
+            with open(file_name, 'r') as f:
+                self.repères = json.load(f)
+            self.populate_tree()
 
-            except Exception as e:
-                print(f"Erreur lors de l'importation des mesures: {e}")
+    def populate_tree(self):
+        self.tree.clear()
+        for rep in self.repères:
+            item = QTreeWidgetItem([rep["name"]])
+            self.tree.addTopLevelItem(item)
+
+    def open_menu(self, position):
+        item = self.tree.itemAt(position)
+        if item:
+            menu = QMenu()
+            set_ref_action = menu.addAction("Définir comme repère de référence")
+            action = menu.exec_(self.tree.viewport().mapToGlobal(position))
+            if action == set_ref_action:
+                self.ref_repère = item.text(0)
+                self.update_repères()
+
+    def update_repères(self):
+        # Calcul des transformations par rapport au repère de référence
+        ref = next(r for r in self.repères if r["name"] == self.ref_repère)
+        ref_matrix = self.to_matrix(ref)
         
+        for rep in self.repères:
+            if rep["name"] != self.ref_repère:
+                mat = self.to_matrix(rep)
+                relative = np.linalg.inv(ref_matrix) @ mat
+                # Mise à jour des valeurs
+                rep["X"], rep["Y"], rep["Z"] = relative[0, 3], relative[1, 3], relative[2, 3]
+        self.populate_tree()
+
+    def to_matrix(self, rep):
+        # Création d'une matrice homogène 4x4 à partir de X,Y,Z,A,B,C
+        tx, ty, tz = rep["X"], rep["Y"], rep["Z"]
+        # Simplification : pas de rotation pour l'instant
+        mat = np.eye(4)
+        mat[0, 3], mat[1, 3], mat[2, 3] = tx, ty, tz
+        return mat
+
     def vider_mesures(self):
+        self.label_robot_name_me.setText("")
+        self.tree.clear()
         self.table_me.clearContents()
-        self.label_robot_name_me.setText("")  
 
     def calculer_ecarts_dh_me(self):
         """Calcule les écarts entre les matrices DH et ME et les affiche dans table_corr"""
@@ -777,6 +830,47 @@ class MGDApp(QMainWindow):
                 value_tcp = 0.0
             value_tcp_corr += delta
             item_tcp_corr.setText(f"{value_tcp_corr:.2f}")
+
+    def display_repere(self, item):
+        rep_name = item.text(0)
+        rep = next((r for r in self.repères if r["name"] == rep_name), None)
+        if rep:
+            # --- Calcul de la matrice de rotation ---
+            A, B, C = np.radians([rep["A"], rep["B"], rep["C"]])
+            # Rotations élémentaires
+            Rx = np.array([[1, 0, 0],
+                        [0, np.cos(A), -np.sin(A)],
+                        [0, np.sin(A), np.cos(A)]])
+            Ry = np.array([[np.cos(B), 0, np.sin(B)],
+                        [0, 1, 0],
+                        [-np.sin(B), 0, np.cos(B)]])
+            Rz = np.array([[np.cos(C), -np.sin(C), 0],
+                        [np.sin(C), np.cos(C), 0],
+                        [0, 0, 1]])
+            # Matrice finale
+            R = Rz @ Ry @ Rx
+
+            # --- Mise à jour table_me ---
+            # Ligne 0 : Translation
+            self.table_me.setItem(0, 0, QTableWidgetItem(str(f"{rep["X"]:.2f}")))
+            self.table_me.setItem(0, 1, QTableWidgetItem(str(f"{rep["Y"]:.2f}")))
+            self.table_me.setItem(0, 2, QTableWidgetItem(str(f"{rep["Z"]:.2f}")))
+
+            # Ligne 1 : Rotation
+            self.table_me.setItem(1, 0, QTableWidgetItem(str(f"{rep["A"]:.2f}")))
+            self.table_me.setItem(1, 1, QTableWidgetItem(str(f"{rep["B"]:.2f}")))
+            self.table_me.setItem(1, 2, QTableWidgetItem(str(f"{rep["C"]:.2f}")))
+
+        # Ligne 2 : Axe X
+        for j in range(3):
+            self.table_me.setItem(2, j, QTableWidgetItem(f"{R[j,0]:.6f}"))
+        # Ligne 3 : Axe Y
+        for j in range(3):
+            self.table_me.setItem(3, j, QTableWidgetItem(f"{R[j,1]:.6f}"))
+        # Ligne 4 : Axe Z
+        for j in range(3):
+            self.table_me.setItem(4, j, QTableWidgetItem(f"{R[j,2]:.6f}"))
+
 
 
 if __name__ == "__main__":
