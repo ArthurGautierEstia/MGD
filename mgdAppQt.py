@@ -551,23 +551,40 @@ class MGDApp(QMainWindow):
         grid.setColor((150, 150, 150, 100))  # Couleur grise semi-transparente
         self.viewer.addItem(grid)
 
+    # def update_segment_pose(self):
+    #     for i in range(len(self.robot_links)):
+    #         mesh_item = self.robot_links[i]
+    #         T= self.corrected_matrices[i]
+    #         if mesh_item:
+    #             mesh_item.resetTransform()  # Réinitialise la transformation
+    #             R = T[:3, :3]
+    #             pos = T[:3, 3]
+    #             # Appliquer rotations ZYX
+    #             rx = np.degrees(np.arctan2(R[2,1], R[2,2]))
+    #             ry = np.degrees(np.arctan2(-R[2,0], np.sqrt(R[2,1]**2 + R[2,2]**2)))
+    #             rz = np.degrees(np.arctan2(R[1,0], R[0,0]))
+    #             mesh_item.rotate(rx, 1, 0, 0)
+    #             mesh_item.rotate(ry, 0, 1, 0)
+    #             mesh_item.rotate(rz, 0, 0, 1)
+    #             mesh_item.translate(pos[0], pos[1], pos[2])
+    #         self.viewer.addItem(mesh_item)
+    
     def update_segment_pose(self):
         for i in range(len(self.robot_links)):
             mesh_item = self.robot_links[i]
-            T= self.corrected_matrices[i]
+            T = self.corrected_matrices[i]
             if mesh_item:
                 mesh_item.resetTransform()  # Réinitialise la transformation
-                R = T[:3, :3]
-                pos = T[:3, 3]
-                # Appliquer rotations ZYX
-                rx = np.degrees(np.arctan2(R[2,1], R[2,2]))
-                ry = np.degrees(np.arctan2(-R[2,0], np.sqrt(R[2,1]**2 + R[2,2]**2)))
-                rz = np.degrees(np.arctan2(R[1,0], R[0,0]))
-                mesh_item.rotate(rx, 1, 0, 0)
-                mesh_item.rotate(ry, 0, 1, 0)
-                mesh_item.rotate(rz, 0, 0, 1)
-                mesh_item.translate(pos[0], pos[1], pos[2])
+                # Convertir la matrice numpy (4x4) en QMatrix4x4
+                qmat = QtGui.QMatrix4x4(
+                    T[0,0], T[0,1], T[0,2], T[0,3],
+                    T[1,0], T[1,1], T[1,2], T[1,3],
+                    T[2,0], T[2,1], T[2,2], T[2,3],
+                    T[3,0], T[3,1], T[3,2], T[3,3]
+                )
+                mesh_item.setTransform(qmat)  # Applique la transformation homogène exacte
             self.viewer.addItem(mesh_item)
+
  
     def sauvegarder_config(self):
         file_name, _ = QFileDialog.getSaveFileName(self, "Sauvegarder configuration", "", "JSON Files (*.json)")
