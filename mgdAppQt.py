@@ -4,7 +4,7 @@ import numpy as np
 from PyQt5.QtWidgets import (
     QApplication, QMainWindow, QWidget, QVBoxLayout, QHBoxLayout, QGridLayout,
     QTableWidget, QTableWidgetItem, QPushButton, QLabel, QSlider, QSpinBox, QFileDialog, QLineEdit, QCheckBox, QMessageBox,
-    QDialog, QSpinBox as ConfigSpinBox
+    QDialog, QSpinBox as ConfigSpinBox,QAbstractItemView
 )
 from PyQt5.QtCore import Qt
 from PyQt5.QtGui import QFont
@@ -179,6 +179,8 @@ class MGDApp(QMainWindow):
 
         self.table_dh = QTableWidget(7, 4)
         self.table_dh.setHorizontalHeaderLabels(["alpha (°)", "d (mm)", "theta (°)", "r (mm)"])
+        self.table_dh.setHorizontalScrollMode(QAbstractItemView.ScrollPerPixel)
+        self.table_dh.setVerticalScrollMode(QAbstractItemView.ScrollPerPixel)
         self.table_dh.horizontalHeader().setDefaultSectionSize(90)
         self.table_dh.cellChanged.connect(self.visualiser_3d)
         tables_layout.addWidget(self.table_dh)
@@ -201,6 +203,8 @@ class MGDApp(QMainWindow):
         self.table_me = QTableWidget(6, 4)
         self.table_me.setHorizontalHeaderLabels(["alpha (°)", "d (mm)", "theta (°)", "r (mm)"])
         self.table_me.horizontalHeader().setDefaultSectionSize(90)
+        self.table_me.setHorizontalScrollMode(QAbstractItemView.ScrollPerPixel)
+        self.table_me.setVerticalScrollMode(QAbstractItemView.ScrollPerPixel)
         #self.table_me.cellChanged.connect(self.visualiser_3d)
         tables_layout.addWidget(self.table_me)
 
@@ -265,6 +269,8 @@ class MGDApp(QMainWindow):
         self.result_table.setHorizontalHeaderLabels(["TCP","TCP Corr", "Ecarts", "Jog"])
         self.result_table.setVerticalHeaderLabels(["X (mm)","Y (mm)","Z (mm)", "A (°)","B (°)","C (°)"])
         self.result_table.horizontalHeader().setDefaultSectionSize(110)
+        self.result_table.setHorizontalScrollMode(QAbstractItemView.ScrollPerPixel)
+        self.result_table.setVerticalScrollMode(QAbstractItemView.ScrollPerPixel)
 
         # Ajouter les boutons + et - dans la colonne 3
         for row in range(6):
@@ -295,6 +301,8 @@ class MGDApp(QMainWindow):
         self.table_corr = QTableWidget(6, 6)
         self.table_corr.setHorizontalHeaderLabels(["Tx(mm)", "Ty(mm)", "Tz(mm)", "Rx(°)", "Ry(°)", "Rz(°)"])
         self.table_corr.horizontalHeader().setDefaultSectionSize(80)
+        self.table_corr.setHorizontalScrollMode(QAbstractItemView.ScrollPerPixel)
+        self.table_corr.setVerticalScrollMode(QAbstractItemView.ScrollPerPixel)
         self.table_corr.cellChanged.connect(self.visualiser_3d)
         slider_layout.addWidget(self.table_corr)
 
