@@ -55,8 +55,9 @@ QTableWidget::item:hover {
 
 QTableCornerButton::section {
     background-color: #1E1E1E;
-    border-bottom: 1px solid #2C2C2C;
-    border-right: 1px solid #2C2C2C;
+    border: 1px solid #2C2C2C;
+    border-top: none;
+    border-left: none;
 }
 
 
@@ -64,14 +65,15 @@ QTableCornerButton::section {
 
 /* Sliders */
 QSlider::groove:horizontal {
-    height: 6px;
+    height: 8px;
     background: #2C2C2C;
     border-radius: 3px;
 }
 QSlider::handle:horizontal {
     background: #FF6F00;
-    width: 14px;
-    border-radius: 7px;
+    width: 24px;
+    margin: -2px 0px;
+    border-radius: 6px;
 }
 
 /* SpinBox & LineEdit */
@@ -90,3 +92,82 @@ QSpinBox:focus, QLineEdit:focus {
 QLabel {
     color: #E0E0E0;
 }
+
+
+
+/* ===== Scrollbar HORIZONTALE (track fixe 10px, sans boutons) ===== */
+QScrollBar:horizontal {
+    background: #121212;     /* Track */
+    height: 12px;
+    margin: 0;               /* Aucun espace réservé aux boutons */
+    border: none;
+    border-radius: 4px;      /* Arrondi du track */
+}
+
+/* Zones entre le thumb et les extrémités : doivent matcher le track */
+QScrollBar::add-page:horizontal,
+QScrollBar::sub-page:horizontal {
+    background: #121212;     /* EXACTEMENT la même couleur que le track */
+    border: none;
+    border-radius: 5px;      /* Même arrondi que le track */
+}
+
+/* Thumb (légèrement plus fin via margin) */
+QScrollBar::handle:horizontal {
+    background: #2C2C2C;
+    min-width: 20px;
+    border: none;
+    border-radius: 4px;      /* Un peu moins arrondi que le track */
+    margin: 2px 0px 2px 0px; /* 1 px en haut/bas -> thumb visuellement plus fin */
+}
+QScrollBar::handle:horizontal:hover {
+    background: #FF6F00;     /* Accent orange KUKA au survol */
+}
+
+/* Boutons supprimés */
+QScrollBar::add-line:horizontal,
+QScrollBar::sub-line:horizontal {
+    width: 0px;
+    height: 0px;
+    background: none;
+    border: none;
+}
+
+
+/* ===== Scrollbar VERTICALE (track fixe 10px, sans boutons) ===== */
+QScrollBar:vertical {
+    background: #1E1E1E;
+    width: 10px;
+    margin: 0;
+    border: none;
+    border-radius: 5px;
+}
+
+QScrollBar::add-page:vertical,
+QScrollBar::sub-page:vertical {
+    background: #1E1E1E;
+    border: none;
+    border-radius: 5px;
+}
+
+QScrollBar::handle:vertical {
+    background: #2C2C2C;
+    min-height: 20px;
+    border: none;
+    border-radius: 4px;
+    margin: 0px 1px 0px 1px; /* 1 px gauche/droite -> thumb visuellement plus fin */
+}
+QScrollBar::handle:vertical:hover {
+    background: #FF6F00;
+}
+
+QScrollBar::add-line:vertical,
+QScrollBar::sub-line:vertical {
+    width: 0px;
+    height: 0px;
+    background: none;
+    border: none;
+}
+
+
+

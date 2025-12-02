@@ -4,7 +4,7 @@ import numpy as np
 from PyQt5.QtWidgets import (
     QApplication, QMainWindow, QWidget, QVBoxLayout, QHBoxLayout, QGridLayout, QTreeWidget, QTreeWidgetItem, QMenu,
     QTableWidget, QTableWidgetItem, QPushButton, QLabel, QSlider, QSpinBox, QFileDialog, QLineEdit, QCheckBox, QMessageBox,
-    QDialog, QSpinBox as ConfigSpinBox
+    QDialog, QSpinBox as ConfigSpinBox,QAbstractItemView
 )
 from PyQt5.QtCore import Qt
 from PyQt5.QtGui import QFont
@@ -178,8 +178,12 @@ class MGDApp(QMainWindow):
         th_layout.addWidget(self.btn_save_th, 0, 3)
         
         tables_layout.addLayout(th_layout)
+
+        self.table_dh = QTableWidget(7, 4)
         self.table_dh = QTableWidget(6, 4)
         self.table_dh.setHorizontalHeaderLabels(["alpha (°)", "d (mm)", "theta (°)", "r (mm)"])
+        self.table_dh.setHorizontalScrollMode(QAbstractItemView.ScrollPerPixel)
+        self.table_dh.setVerticalScrollMode(QAbstractItemView.ScrollPerPixel)
         self.table_dh.horizontalHeader().setDefaultSectionSize(90)
         self.table_dh.cellChanged.connect(self.visualiser_3d)
         tables_layout.addWidget(self.table_dh)
@@ -221,6 +225,12 @@ class MGDApp(QMainWindow):
 
         tables_layout.addLayout(me_layout)
 
+        self.table_me = QTableWidget(6, 4)
+        self.table_me.setHorizontalHeaderLabels(["alpha (°)", "d (mm)", "theta (°)", "r (mm)"])
+        self.table_me.horizontalHeader().setDefaultSectionSize(90)
+        self.table_me.setHorizontalScrollMode(QAbstractItemView.ScrollPerPixel)
+        self.table_me.setVerticalScrollMode(QAbstractItemView.ScrollPerPixel)
+        #self.table_me.cellChanged.connect(self.visualiser_3d)
         self.table_me = QTableWidget(5, 3)
         self.table_me.setHorizontalHeaderLabels(["X", "Y", "Z"])
         self.table_me.setVerticalHeaderLabels(["Translation (mm)", "Rotation (°)", "X axis", "Y axis", "Z axis",])
@@ -263,6 +273,7 @@ class MGDApp(QMainWindow):
             self.spinboxes_q.append(spinbox)
         
         
+        
         # Boutons
         btn_layout = QVBoxLayout()
         btn_grid = QGridLayout()
@@ -287,6 +298,8 @@ class MGDApp(QMainWindow):
         self.result_table.setHorizontalHeaderLabels(["TCP","TCP Corr", "Ecarts", "Jog"])
         self.result_table.setVerticalHeaderLabels(["X (mm)","Y (mm)","Z (mm)", "A (°)","B (°)","C (°)"])
         self.result_table.horizontalHeader().setDefaultSectionSize(110)
+        self.result_table.setHorizontalScrollMode(QAbstractItemView.ScrollPerPixel)
+        self.result_table.setVerticalScrollMode(QAbstractItemView.ScrollPerPixel)
 
         # Ajouter les boutons + et - dans la colonne 3
         for row in range(6):
@@ -319,6 +332,8 @@ class MGDApp(QMainWindow):
         self.table_corr = QTableWidget(6, 6)
         self.table_corr.setHorizontalHeaderLabels(["Tx(mm)", "Ty(mm)", "Tz(mm)", "Rx(°)", "Ry(°)", "Rz(°)"])
         self.table_corr.horizontalHeader().setDefaultSectionSize(80)
+        self.table_corr.setHorizontalScrollMode(QAbstractItemView.ScrollPerPixel)
+        self.table_corr.setVerticalScrollMode(QAbstractItemView.ScrollPerPixel)
         self.table_corr.cellChanged.connect(self.visualiser_3d)
         slider_layout.addWidget(self.table_corr)
 
@@ -383,7 +398,10 @@ class MGDApp(QMainWindow):
             d     = get_cell_value(self.table_dh, i, 1)
             theta_offset = np.radians(get_cell_value(self.table_dh, i, 2))
             r     = get_cell_value(self.table_dh, i, 3)
-            q_deg = self.spinboxes_q[i].value()
+            if i == 6:
+                q_deg = 0
+            else:
+                q_deg = self.spinboxes_q[i].value()
             q = np.radians(q_deg)
             theta = theta_offset + q
             corr = [get_cell_value(self.table_corr, i, j) for j in range(6)]
@@ -398,7 +416,10 @@ class MGDApp(QMainWindow):
             d     = get_cell_value(self.table_me, i, 1)
             theta_offset = np.radians(get_cell_value(self.table_me, i, 2))
             r     = get_cell_value(self.table_me, i, 3)
-            q_deg = self.spinboxes_q[i].value()
+            if i == 6:
+                q_deg = 0
+            else:
+                q_deg = self.spinboxes_q[i].value()
             q = np.radians(q_deg)
             theta = theta_offset + q
             params.append((alpha, d, theta, r))
@@ -570,9 +591,10 @@ class MGDApp(QMainWindow):
                 try:
                     with open(file_name, "r") as f:
                         data = json.load(f)
-                    for i in range(6):
+                    for i in range(7):
                         for j in range(4):
                             self.table_dh.setItem(i,j,QTableWidgetItem(data["dh"][i][j]))
+                    for i in range (6):    
                         for j in range(6):
                             self.table_corr.setItem(i,j,QTableWidgetItem(data["corr"][i][j]))
                         self.spinboxes_q[i].setValue(data["q"][i])
@@ -879,7 +901,7 @@ if __name__ == "__main__":
         app.setStyleSheet(f.read())
 
     window = MGDApp()
-    #window.showMaximized()
+    window.showMaximized()
     window.show()
 
     sys.exit(app.exec_())
