@@ -668,6 +668,13 @@ class MGDApp(QMainWindow):
             for i in range(0,7):
                 chemin_stl = f"./robot/rocky{i}.stl"
                 T=self.corrected_matrices[i]
+                # Convertir la matrice numpy (4x4) en QMatrix4x4
+                qmat = QtGui.QMatrix4x4(
+                    T[0,0], T[0,1], T[0,2], T[0,3],
+                    T[1,0], T[1,1], T[1,2], T[1,3],
+                    T[2,0], T[2,1], T[2,2], T[2,3],
+                    T[3,0], T[3,1], T[3,2], T[3,3]
+                )
 
                 if i == 0:
                     kuka_color = kuka_black
@@ -689,20 +696,7 @@ class MGDApp(QMainWindow):
 
                     # Créer l'objet 3D
                     mesh_item = gl.GLMeshItem(meshdata=mesh_data, smooth=True, color=kuka_color, shader='shaded')
-
-                    # Appliquer la transformation homogène T
-                    pos = T[:3, 3]
-                    
-                    # Rotation : utiliser la matrice T[:3,:3]
-                    # GLMeshItem n'accepte pas directement une matrice, donc on applique des rotations successives
-                    R = T[:3, :3]
-                    rx = np.degrees(np.arctan2(R[2,1], R[2,2]))
-                    ry = np.degrees(np.arctan2(-R[2,0], np.sqrt(R[2,1]**2 + R[2,2]**2)))
-                    rz = np.degrees(np.arctan2(R[1,0], R[0,0]))
-                    mesh_item.rotate(rx, 1, 0, 0)
-                    mesh_item.rotate(ry, 0, 1, 0)
-                    mesh_item.rotate(rz, 0, 0, 1)
-                    mesh_item.translate(pos[0], pos[1], pos[2])
+                    mesh_item.setTransform(qmat)  # Applique la transformation homogène exacte
                     
                     # Ajouter au viewer
                     self.robot_links.append(mesh_item)
