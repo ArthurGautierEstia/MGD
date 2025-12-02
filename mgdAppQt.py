@@ -2,12 +2,12 @@ import sys
 import json
 import numpy as np
 from PyQt5.QtWidgets import (
-    QApplication, QMainWindow, QWidget, QVBoxLayout, QHBoxLayout, QGridLayout, QTreeWidget, QTreeWidgetItem, QMenu,
+    QApplication, QMainWindow, QWidget, QVBoxLayout, QHBoxLayout, QGridLayout, QTreeWidget, QTreeWidgetItem, QMenu, 
     QTableWidget, QTableWidgetItem, QPushButton, QLabel, QSlider, QSpinBox, QFileDialog, QLineEdit, QCheckBox, QMessageBox,
     QDialog, QSpinBox as ConfigSpinBox,QAbstractItemView
 )
 from PyQt5.QtCore import Qt
-from PyQt5.QtGui import QFont
+from PyQt5.QtGui import QFont, QBrush, QIcon, QColor
 import pyqtgraph.opengl as gl
 from pyqtgraph.Qt import QtGui
 import pyqtgraph as pg
@@ -155,12 +155,15 @@ class MGDApp(QMainWindow):
         # Initialiser la position home (par défaut (0, -90, 90, 0, 90, 0))
         self.home_position = [0, -90, 90, 0, 90, 0]
 
+        #Style global
+        style_titre = "font-size: 14px; font-weight: bold;"
+
         # Zone tables
         tables_layout = QVBoxLayout()
 
         th_layout = QGridLayout()
         titre1 = QLabel("Configuration robot")
-        titre1.setStyleSheet("font-size: 16px; font-weight: bold;")
+        titre1.setStyleSheet(style_titre)
         tables_layout.addWidget(titre1)
         
         self.label_robot_name_th = QLineEdit()
@@ -171,13 +174,17 @@ class MGDApp(QMainWindow):
         self.cad_cb.stateChanged.connect(self.basculer_visibilite_robot)
         th_layout.addWidget(self.cad_cb, 0, 1)
 
-        self.btn_load_th = QPushButton("Charger")
+        self.btn_load_th = QPushButton("Importer une configuration")
         th_layout.addWidget(self.btn_load_th, 0, 2)
 
-        self.btn_save_th = QPushButton("Sauvegarder")
+        self.btn_save_th = QPushButton("Exporter")
         th_layout.addWidget(self.btn_save_th, 0, 3)
         
         tables_layout.addLayout(th_layout)
+
+        self.table_dh_titre = QLabel("Table de Denavit-Hartenberg")
+        tables_layout.addWidget(self.table_dh_titre)
+
 
         self.table_dh = QTableWidget(7, 4)
         self.table_dh.setHorizontalHeaderLabels(["alpha (°)", "d (mm)", "theta (°)", "r (mm)"])
@@ -189,7 +196,7 @@ class MGDApp(QMainWindow):
 
         me_layout = QGridLayout()
         titre2 = QLabel("Mesures robot")
-        titre2.setStyleSheet("font-size: 16px; font-weight: bold;")
+        titre2.setStyleSheet(style_titre)
         tables_layout.addWidget(titre2)
 
         self.label_robot_name_me = QLineEdit()
@@ -202,23 +209,17 @@ class MGDApp(QMainWindow):
         self.tree = QTreeWidget()
         self.tree.setHeaderLabels(["Repères"])
         me_layout.addWidget(self.tree, 1, 0)
-        
-        # Connecter le clic sur un item
-        self.tree.itemClicked.connect(self.display_repere)
 
         tables_btn_layout = QVBoxLayout()
 
-        self.btn_clear_me = QPushButton("Vider")
-        self.btn_set_as_ref = QPushButton("Référence")
-        self.btn_save_frames = QPushButton("Sauvegarder")
-        self.btn_calculate_corr = QPushButton("Calculer")
+        self.btn_set_as_ref = QPushButton("Définir en Référence")
+        self.btn_calculate_corr = QPushButton("Calculer les corrections")
 
-        tables_btn_layout.addWidget(self.btn_clear_me)
         tables_btn_layout.addWidget(self.btn_set_as_ref)
-        tables_btn_layout.addWidget(self.btn_save_frames)
         tables_btn_layout.addWidget(self.btn_calculate_corr)
 
         tables_btn_layout.addStretch()
+
         me_layout.addLayout(tables_btn_layout, 1, 1)
 
 
@@ -241,7 +242,7 @@ class MGDApp(QMainWindow):
 
         slider_layout = QVBoxLayout()
         titre3 = QLabel("Coordonnées articulaires")
-        titre3.setStyleSheet("font-size: 16px; font-weight: bold;")
+        titre3.setStyleSheet(style_titre)
         slider_layout.addWidget(titre3)
         self.sliders_q = []
         self.spinboxes_q = []
@@ -291,7 +292,7 @@ class MGDApp(QMainWindow):
 
          # Résultat MGD
         titre4 = QLabel("Positions cartésiennes")
-        titre4.setStyleSheet("font-size: 16px; font-weight: bold;")
+        titre4.setStyleSheet(style_titre)
         slider_layout.addWidget(titre4)
         self.result_table = QTableWidget(6, 4)
         self.result_table.setHorizontalHeaderLabels(["TCP","TCP Corr", "Ecarts", "Jog"])
@@ -305,10 +306,6 @@ class MGDApp(QMainWindow):
             # Créer les boutons
             btn_plus = QPushButton("+")
             btn_minus = QPushButton("-")
-
-            # Connecter les boutons à la fonction d'incrément
-            btn_plus.clicked.connect(lambda _, r=row: self.increment_value(r, +1))
-            btn_minus.clicked.connect(lambda _, r=row: self.increment_value(r, -1))
 
             # Créer un layout horizontal pour les deux boutons
             btn_layout = QHBoxLayout()
@@ -326,14 +323,13 @@ class MGDApp(QMainWindow):
         slider_layout.addWidget(self.result_table)
 
         titre5 = QLabel("Corrections 6D")
-        titre5.setStyleSheet("font-size: 16px; font-weight: bold;")
+        titre5.setStyleSheet(style_titre)
         slider_layout.addWidget(titre5)
         self.table_corr = QTableWidget(6, 6)
         self.table_corr.setHorizontalHeaderLabels(["Tx(mm)", "Ty(mm)", "Tz(mm)", "Rx(°)", "Ry(°)", "Rz(°)"])
         self.table_corr.horizontalHeader().setDefaultSectionSize(80)
         self.table_corr.setHorizontalScrollMode(QAbstractItemView.ScrollPerPixel)
         self.table_corr.setVerticalScrollMode(QAbstractItemView.ScrollPerPixel)
-        self.table_corr.cellChanged.connect(self.visualiser_3d)
         slider_layout.addWidget(self.table_corr)
 
         layout.addLayout(slider_layout)
@@ -392,13 +388,16 @@ class MGDApp(QMainWindow):
         self.btn_save_th.clicked.connect(self.sauvegarder_config)
         self.btn_load_th.clicked.connect(self.charger_config)
         self.btn_import_me.clicked.connect(self.importer_mesures)
-        self.btn_clear_me.clicked.connect(self.vider_mesures)
-        self.btn_calculate_corr.clicked.connect(self.calculer_ecarts_dh_me)
         
         self.btn_prev.clicked.connect(self.afficher_repere_precedent)
         self.btn_next.clicked.connect(self.afficher_repere_suivant)
         self.btn_limits.clicked.connect(self.configurer_limites_axes)
         self.btn_home_position.clicked.connect(self.appliquer_home_position)
+        self.table_corr.cellChanged.connect(self.visualiser_3d)
+        btn_plus.clicked.connect(lambda _, r=row: self.increment_value(r, +1))
+        btn_minus.clicked.connect(lambda _, r=row: self.increment_value(r, -1))
+        self.tree.itemClicked.connect(self.display_repere)
+        self.btn_set_as_ref.clicked.connect(self.definir_reference)
         
         self.btn_toggle_transparency.clicked.connect(self.toggle_transparency)
         self.btn_toggle_axes.clicked.connect(self.toggle_axes)
@@ -422,23 +421,6 @@ class MGDApp(QMainWindow):
             theta = theta_offset + q
             corr = [get_cell_value(self.table_corr, i, j) for j in range(6)]
             params.append((alpha, d, theta, r, corr))
-        return params
-
-    def lire_parametres_me(self):
-        """Lit les paramètres mesurés de la table_me"""
-        params = []
-        for i in range(self.table_me.rowCount()):
-            alpha = np.radians(get_cell_value(self.table_me, i, 0))
-            d     = get_cell_value(self.table_me, i, 1)
-            theta_offset = np.radians(get_cell_value(self.table_me, i, 2))
-            r     = get_cell_value(self.table_me, i, 3)
-            if i == 6:
-                q_deg = 0
-            else:
-                q_deg = self.spinboxes_q[i].value()
-            q = np.radians(q_deg)
-            theta = theta_offset + q
-            params.append((alpha, d, theta, r))
         return params
 
     def calculer_mgd(self):
@@ -752,95 +734,6 @@ class MGDApp(QMainWindow):
             self.sliders_q[i].setValue(self.home_position[i])
             self.spinboxes_q[i].setValue(self.home_position[i])
 
-    def importer_mesures(self):
-        file_name, _ = QFileDialog.getOpenFileName(self, "Importer JSON", "", "JSON Files (*.json)")
-        if file_name:
-            with open(file_name, 'r') as f:
-                self.repères = json.load(f)
-            self.populate_tree()
-
-    def populate_tree(self):
-        self.tree.clear()
-        for rep in self.repères:
-            item = QTreeWidgetItem([rep["name"]])
-            self.tree.addTopLevelItem(item)
-
-    def open_menu(self, position):
-        item = self.tree.itemAt(position)
-        if item:
-            menu = QMenu()
-            set_ref_action = menu.addAction("Définir comme repère de référence")
-            action = menu.exec_(self.tree.viewport().mapToGlobal(position))
-            if action == set_ref_action:
-                self.ref_repère = item.text(0)
-                self.update_repères()
-
-    def update_repères(self):
-        # Calcul des transformations par rapport au repère de référence
-        ref = next(r for r in self.repères if r["name"] == self.ref_repère)
-        ref_matrix = self.to_matrix(ref)
-        
-        for rep in self.repères:
-            if rep["name"] != self.ref_repère:
-                mat = self.to_matrix(rep)
-                relative = np.linalg.inv(ref_matrix) @ mat
-                # Mise à jour des valeurs
-                rep["X"], rep["Y"], rep["Z"] = relative[0, 3], relative[1, 3], relative[2, 3]
-        self.populate_tree()
-
-    def to_matrix(self, rep):
-        # Création d'une matrice homogène 4x4 à partir de X,Y,Z,A,B,C
-        tx, ty, tz = rep["X"], rep["Y"], rep["Z"]
-        # Simplification : pas de rotation pour l'instant
-        mat = np.eye(4)
-        mat[0, 3], mat[1, 3], mat[2, 3] = tx, ty, tz
-        return mat
-
-    def vider_mesures(self):
-        self.label_robot_name_me.setText("")
-        self.tree.clear()
-        self.table_me.clearContents()
-
-    def calculer_ecarts_dh_me(self):
-        """Calcule les écarts entre les matrices DH et ME et les affiche dans table_corr"""
-        try:
-            # Vérifier que table_me contient des données
-            if not self.table_me.item(0, 0) or self.table_me.item(0, 0).text() == "":
-                return
-            
-            # Lire les paramètres mesurés
-            params_me = self.lire_parametres_me()
-            
-            T_me = np.eye(4)
-
-            for i, (alpha, d, theta, r) in enumerate(params_me):
-                T_dh = self.dh_matrices[i+1]  # Récupérer la matrice DH déjà calculée
-                T_me = T_me @ dh_modified(alpha, d, theta, r)
-                
-                # Écart de position
-                delta_pos = T_me[:3, 3] - T_dh[:3, 3]
-                # Écart d'orientation : matrice de rotation d'erreur
-                R_dh = T_dh[:3, :3]
-                R_me = T_me[:3, :3]
-                
-                # Matrice de rotation d'erreur relative : R_error = R_me @ R_dh^T
-                R_error = R_me @ R_dh.T
-                # Extraire les angles Euler ZYX de la matrice d'erreur
-                angles = R.from_matrix(R_error).as_euler('zyx', degrees=True)
-                rx_error, ry_error, rz_error = angles[::-1]  # car ZYX
-
-                # Afficher les écarts dans la table_corr
-                # Colonnes: Tx, Ty, Tz, Rx, Ry, Rz
-                self.table_corr.setItem(i, 0, QTableWidgetItem(f"{delta_pos[0]:.2f}"))
-                self.table_corr.setItem(i, 1, QTableWidgetItem(f"{delta_pos[1]:.2f}"))
-                self.table_corr.setItem(i, 2, QTableWidgetItem(f"{delta_pos[2]:.2f}"))
-                self.table_corr.setItem(i, 3, QTableWidgetItem(f"{rx_error:.4f}"))
-                self.table_corr.setItem(i, 4, QTableWidgetItem(f"{ry_error:.4f}"))
-                self.table_corr.setItem(i, 5, QTableWidgetItem(f"{rz_error:.4f}"))
-        
-        except Exception as e:
-            QMessageBox.critical(self, "Erreur", f"Erreur lors du calcul des écarts: {e}")
-
     def increment_value(self, row, delta):
         """Incrémente ou décrémente la valeur dans la colonne 0 de la ligne donnée"""
         item_tcp = self.result_table.item(row, 0)
@@ -870,6 +763,54 @@ class MGDApp(QMainWindow):
             value_tcp_corr += delta
             item_tcp_corr.setText(f"{value_tcp_corr:.2f}")
 
+    def importer_mesures(self):
+        file_name, _ = QFileDialog.getOpenFileName(self, "Importer JSON", "", "JSON Files (*.json)")
+        if file_name:
+            with open(file_name, 'r') as f:
+                self.repères = json.load(f)
+            self.populate_tree()
+
+    def populate_tree(self):
+        self.tree.clear()
+        for rep in self.repères:
+            item = QTreeWidgetItem([rep["name"]])
+            self.tree.addTopLevelItem(item)
+
+    def update_repères(self):
+        # Calcul des transformations par rapport au repère de référence
+        ref = next(r for r in self.repères if r["name"] == self.ref_repère)
+        ref_matrix = self.to_matrix(ref)
+        
+        for rep in self.repères:
+            if rep["name"] != self.ref_repère:
+                mat = self.to_matrix(rep)
+                relative = np.linalg.inv(ref_matrix) @ mat
+                # Mise à jour des valeurs
+                rep["X"], rep["Y"], rep["Z"] = relative[0, 3], relative[1, 3], relative[2, 3]
+        self.populate_tree()
+
+    def to_matrix(self, rep):
+        A, B, C = np.radians([rep["A"], rep["B"], rep["C"]])
+        Rx = np.array([[1, 0, 0],
+                       [0, np.cos(A), -np.sin(A)],
+                       [0, np.sin(A), np.cos(A)]])
+        Ry = np.array([[np.cos(B), 0, np.sin(B)],
+                       [0, 1, 0],
+                       [-np.sin(B), 0, np.cos(B)]])
+        Rz = np.array([[np.cos(C), -np.sin(C), 0],
+                       [np.sin(C), np.cos(C), 0],
+                       [0, 0, 1]])
+        R = Rz @ Ry @ Rx
+        mat = np.eye(4)
+        mat[:3, :3] = R
+        mat[0, 3], mat[1, 3], mat[2, 3] = rep["X"], rep["Y"], rep["Z"]
+        return mat
+
+    def vider_mesures(self):
+        self.label_robot_name_me.setText("")
+        self.tree.clear()
+        self.table_me.clearContents()
+  
     def display_repere(self, item):
         rep_name = item.text(0)
         rep = next((r for r in self.repères if r["name"] == rep_name), None)
@@ -910,6 +851,64 @@ class MGDApp(QMainWindow):
         for j in range(3):
             self.table_me.setItem(4, j, QTableWidgetItem(f"{R[j,2]:.6f}"))
 
+    def definir_reference(self):
+        item = self.tree.currentItem()
+        if item:
+            # Définir le repère de référence
+            self.ref_repere = item.text(0)
+
+            # Mettre en gras le repère sélectionné
+            font = QFont()
+            font.setBold(True)
+            item.setFont(0, font)
+
+            # Remettre les autres repères en normal
+            for i in range(self.tree.topLevelItemCount()):
+                other_item = self.tree.topLevelItem(i)
+                if other_item != item:
+                    normal_font = QFont()
+                    normal_font.setBold(False)
+                    other_item.setFont(0, normal_font)
+
+            print(f"Repère de référence : {self.ref_repere}")
+
+            # Recalcul des coordonnées relatives
+            self.update_repères_relative()
+
+    def update_repères_relative(self):
+        ref = next(r for r in self.repères if r["name"] == self.ref_repere)
+        ref_matrix = self.to_matrix(ref)
+
+        for rep in self.repères:
+            if rep["name"] != self.ref_repere:
+                mat = self.to_matrix(rep)
+                relative = np.linalg.inv(ref_matrix) @ mat
+
+                # Mise à jour des translations
+                rep["X"], rep["Y"], rep["Z"] = relative[0, 3], relative[1, 3], relative[2, 3]
+
+                # Extraire la matrice de rotation
+                R = relative[:3, :3]
+
+                # Extraire les angles (ZYX convention)
+                B = np.arcsin(-R[2, 0])
+                A = np.arctan2(R[2, 1], R[2, 2])
+                C = np.arctan2(R[1, 0], R[0, 0])
+
+                # Convertir en degrés
+                rep["A"], rep["B"], rep["C"] = np.degrees([A, B, C])
+
+        # Remettre le repère de référence à zéro
+        ref["X"], ref["Y"], ref["Z"] = 0.0, 0.0, 0.0
+        ref["A"], ref["B"], ref["C"] = 0.0, 0.0, 0.0
+
+        # Rafraîchir l'arbre
+        # self.populate_tree()
+
+        # Mettre à jour les tables pour le repère actuellement sélectionné
+        current_item = self.tree.currentItem()
+        if current_item:
+            self.display_repere(current_item)
     def toggle_transparency(self):
         self.transparency_enabled = not self.transparency_enabled
         for mesh_item in self.robot_links:
