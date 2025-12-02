@@ -177,7 +177,7 @@ class MGDApp(QMainWindow):
         
         tables_layout.addLayout(th_layout)
 
-        self.table_dh = QTableWidget(6, 4)
+        self.table_dh = QTableWidget(7, 4)
         self.table_dh.setHorizontalHeaderLabels(["alpha (°)", "d (mm)", "theta (°)", "r (mm)"])
         self.table_dh.horizontalHeader().setDefaultSectionSize(90)
         self.table_dh.cellChanged.connect(self.visualiser_3d)
@@ -240,6 +240,7 @@ class MGDApp(QMainWindow):
 
             self.sliders_q.append(slider)
             self.spinboxes_q.append(spinbox)
+        
         
         
         # Boutons
@@ -358,7 +359,10 @@ class MGDApp(QMainWindow):
             d     = get_cell_value(self.table_dh, i, 1)
             theta_offset = np.radians(get_cell_value(self.table_dh, i, 2))
             r     = get_cell_value(self.table_dh, i, 3)
-            q_deg = self.spinboxes_q[i].value()
+            if i == 6:
+                q_deg = 0
+            else:
+                q_deg = self.spinboxes_q[i].value()
             q = np.radians(q_deg)
             theta = theta_offset + q
             corr = [get_cell_value(self.table_corr, i, j) for j in range(6)]
@@ -373,7 +377,10 @@ class MGDApp(QMainWindow):
             d     = get_cell_value(self.table_me, i, 1)
             theta_offset = np.radians(get_cell_value(self.table_me, i, 2))
             r     = get_cell_value(self.table_me, i, 3)
-            q_deg = self.spinboxes_q[i].value()
+            if i == 6:
+                q_deg = 0
+            else:
+                q_deg = self.spinboxes_q[i].value()
             q = np.radians(q_deg)
             theta = theta_offset + q
             params.append((alpha, d, theta, r))
@@ -545,9 +552,10 @@ class MGDApp(QMainWindow):
                 try:
                     with open(file_name, "r") as f:
                         data = json.load(f)
-                    for i in range(6):
+                    for i in range(7):
                         for j in range(4):
                             self.table_dh.setItem(i,j,QTableWidgetItem(data["dh"][i][j]))
+                    for i in range (6):    
                         for j in range(6):
                             self.table_corr.setItem(i,j,QTableWidgetItem(data["corr"][i][j]))
                         self.spinboxes_q[i].setValue(data["q"][i])
@@ -785,7 +793,7 @@ if __name__ == "__main__":
         app.setStyleSheet(f.read())
 
     window = MGDApp()
-    #window.showMaximized()
+    window.showMaximized()
     window.show()
 
     sys.exit(app.exec_())
